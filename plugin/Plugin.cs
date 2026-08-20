@@ -55,6 +55,10 @@ namespace SephiriaBackpackOrganizer
         internal ConfigEntry<float> PriorityWeight2;
         internal ConfigEntry<float> PriorityWeight3;
         internal ConfigEntry<float> PriorityWeight4;
+        internal ConfigEntry<bool> CompassTargetForcedHigh;
+        internal ConfigEntry<string> PriorityLowValueItems;
+        internal ConfigEntry<float> LowValueLevelFactor;
+        internal ConfigEntry<string> PriorityMinLevelItems;
 
         internal ConfigEntry<float> PlanetBonus;
         internal ConfigEntry<string> PlanetClusterExcludedItems;
@@ -68,6 +72,8 @@ namespace SephiriaBackpackOrganizer
         internal ConfigEntry<float> CompassBonus;
         internal ConfigEntry<float> CompassUnpairedFactor;
         internal ConfigEntry<float> BurdenPenalty;
+        internal ConfigEntry<string> BeltItems;
+        internal ConfigEntry<float> BeltRowBonus;
 
         internal ConfigEntry<string> BurdenItemKeys;
 
@@ -186,6 +192,26 @@ namespace SephiriaBackpackOrganizer
             PriorityWeight4 = Config.Bind("Priority", "Weight4", 1.0f,
                 new ConfigDescription("4级藏品等级分权重", new AcceptableValueRange<float>(0.5f, 3f)));
 
+            CompassTargetForcedHigh = Config.Bind("Priority", "CompassTargetForcedHigh", true,
+                "被北向的金色针（指北针 Charm_UpCharmDamage）锁定的目标神器强制最高优先级(1级)：" +
+                "无论稀有度，优先拉满等级。整理前已经配对的针才生效");
+
+            PriorityLowValueItems = Config.Bind("Priority", "LowLevelValueItems",
+                "Item_ShadowEye_Name,Item_FaultfinderNeedle_Name,Item_PlateArmor_Name",
+                "等级价值低的藏品 LocalizedString key（逗号分隔，支持护符类名如 Charm_ShadowEye）：" +
+                "这些藏品升级收益极低，等级分按 LowLevelValueFactor 打折，且优先级降为4级（最晚选格）。" +
+                "默认：闪烁的眼睛、蜥蜴板甲（只要不占负等级格、能启用即可）、故障探测针（升级属性太少）");
+
+            LowValueLevelFactor = Config.Bind("Priority", "LowLevelValueFactor", 0.1f,
+                new ConfigDescription("低等级价值藏品的等级分保留比例（0=等级完全无价值，仍保证启用）",
+                    new AcceptableValueRange<float>(0f, 1f)));
+
+            PriorityMinLevelItems = Config.Bind("Priority", "MinLevelItems",
+                "Item_SuperPlanet_Name=2",
+                "必须优先达到指定最低等级的藏品（格式 key=等级，逗号分隔多个）。" +
+                "命中后强制最高优先级(1级)，启用时有效等级低于目标每级额外扣分，保证优先拉满该等级。" +
+                "默认：谱子「银河」=2（Level2 效果关键）");
+
             PlanetBonus = Config.Bind("Synergy", "PlanetBonus", 40000f,
                 new ConfigDescription("行星望远镜(Charm_PlanetModule)启用时，周围八格每颗启用行星藏品的加成奖励（0=关闭）。" +
                     "该值代表“行星聚拢到望远镜旁”的权重：应明显高于行星自身单级等级分(10000)才会让搜索优先聚拢",
@@ -239,6 +265,15 @@ namespace SephiriaBackpackOrganizer
                 new ConfigDescription("指北针未配对（上方无伤害类/指北针）时其等级分的保留比例。" +
                     "游戏里指北针效果只在配对时生效，未配对等级分应视为虚分（0.1=保留一成）",
                     new AcceptableValueRange<float>(0f, 1f)));
+
+            BeltItems = Config.Bind("Synergy", "BeltItems",
+                "Item_Belt_Name",
+                "多用途腰带类藏品 LocalizedString key（逗号分隔；类识别已覆盖 Charm_WoodenBox，木箱也会命中）。" +
+                "效果：背包最上行(y=0)每有一件神器，效果叠加一次——启用后整理会尽量把神器堆满第一行");
+
+            BeltRowBonus = Config.Bind("Synergy", "BeltRowBonus", 2500f,
+                new ConfigDescription("腰带启用时，第一行每件神器的评分奖励（0=关闭）",
+                    new AcceptableValueRange<float>(0f, 50000f)));
 
             BurdenPenalty = Config.Bind("Burden", "NegativeCellPenalty", 20000f,
                 new ConfigDescription("负面藏品未待在负等级格子时的扣分（强制塞负格；0=关闭）",
@@ -392,6 +427,6 @@ namespace SephiriaBackpackOrganizer
     {
         public const string PLUGIN_GUID = "com.sephiria.backpack-organizer";
         public const string PLUGIN_NAME = "Sephiria Backpack Organizer";
-        public const string PLUGIN_VERSION = "2.4.3";
+        public const string PLUGIN_VERSION = "2.5.0";
     }
 }

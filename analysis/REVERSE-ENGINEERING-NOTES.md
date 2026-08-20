@@ -170,3 +170,29 @@ score = enabledLevelSum*10000 + enabledCount*1000 + Σdisplayed*10 + overflowSum
 - 选择前从 `currentSetEffectCount` 扣掉白纸当前复制数与钥匙自身的原分类，再以其他神器
   `GetItemCategory()` 的实际数量兜底，因此依据的是“不靠钥匙自己”的已有最多羁绊。
 - 搜索约束从“保持原行”改为“保持目标行余数”：例如坚固可以在第 1/5/9 行中选择等级与其他协同最优的格子。
+
+## v2.5.0 追加：藏品优先级微调（金色针锁定 / 低价值 / 最低等级 / 腰带第一行）
+
+本地化 key（zh-CN.json 实测）：
+- 北向的金色针 = `Item_UpCharmDamage_Name`（类 `Charm_UpCharmDamage`，即指北针/罗盘；蓝针为
+  `Item_UpCharmDamage_Uncommon_Name`，同类不同稀有度）。
+- 闪烁的眼睛 = `Item_ShadowEye_Name`（类 `Charm_ShadowEye`）。
+- 蜥蜴板甲 = `Item_PlateArmor_Name`。
+- 故障探测针 = `Item_FaultfinderNeedle_Name`（类名未含 Faultfinder，按 key 识别）。
+- 多用途腰带 = `Item_Belt_Name`（类 `Charm_WoodenBox`，与木箱 `Item_WoodenBox_Name` 同类）。
+- 谱子「银河」= `Item_SuperPlanet_Name`。
+
+机制：
+1. **金色针锁定目标强制 P1**：`CaptureCompassBindings` 后把 `compassTargetByInstance` 全部目标
+   的 `priority` 置 1（整理前已绑定的针只会指向同一实例）。配置 `Priority.CompassTargetForcedHigh`。
+2. **低等级价值物品**：`Priority.LowLevelValueItems`（默认 闪烁的眼睛/蜥蜴板甲/故障探测针）命中后
+   `priority=4` 且 `levelScoreFactor=Priority.LowValueLevelFactor`（默认 0.1），等级分大幅打折；
+   启用（+1000）与负格惩罚保留，等效“只要等级≥0 能生效即可”。
+3. **最低等级目标**：`Priority.MinLevelItems` 格式 `key=等级`（默认 `Item_SuperPlanet_Name=2`），
+   命中后强制 P1；启用时 `eff < 目标` 每缺 1 级扣 `10000×PriorityWeight`，保证银河优先到 2 级。
+4. **多用途腰带（Charm_WoodenBox）**：游戏 `CheckQuickSlot` 按背包前 6 格（IdxToPos(0..5)，即 y=0
+   最上行）统计物品数量，`ApplyEffect(level, count)` 叠加火/雷/冰 AP——腰带自身启用即可，无需占第一行。
+   插件在 `EvaluateLayout` 中按启用腰带给“第一行护符数 × BeltRowBonus（默认 2500）”加分，
+   `FindBestCharmCell` 对 y=0 格 +6000 引导塞满第一行；配置 `Synergy.BeltItems`/`BeltRowBonus`。
+5. 物品匹配统一支持 aName.key 或护符类名（大小写不敏感），见 `MatchesItemKey`。
+6. 日志：`LogItemIdentification` 打印全部护符的 `key|类名` 清单，便于向配置填 key。

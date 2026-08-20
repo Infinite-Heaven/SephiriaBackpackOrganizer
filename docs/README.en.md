@@ -6,7 +6,7 @@
 
 A BepInEx plugin for *Sephiria* (Steam AppID 2436940). Press **F8** to auto-arrange your inventory so all the synergy mechanics trigger at once: tablet coverage, charm position conditions, planet clusters, harmony crystals, dedication badges, the Kelsardanni Key cycle rows, compass original-target binding, white-paper combo filling and the glowing hourglass.
 
-- Version: v2.4.3
+- Version: v2.5.0
 - Runtime: BepInEx 6 (Unity Mono) / Unity 6000.3.21f1 / Mirror multiplayer
 - Works for solo, host and multiplayer clients
 
@@ -34,8 +34,12 @@ Press **F8** to arrange your bag: before on the left, after on the right (instal
   - Dedication badge: strengthens all companion items on the same row
   - **Kelsardanni Key**: counts the existing STURDY / EMBER / GLACIER / MAGITECH synergies and picks the most numerous one; rows 1/2/3/4 map to the four types and repeat every 4 rows, so STURDY picks the best cell among rows 1/5/9
   - **Compass original-target binding**: a compass that already points at a damage item before sorting keeps following the same item instance and stays right below it; stacked compasses move as one vertical chain; only unpaired compasses auto-seek a target
+  - **Golden-needle target gets maxed first**: the artifact locked by the north-pointing golden needle is forced to top priority and receives levels first, regardless of rarity
   - **White-paper combo filling**: counts each combo's current count vs. its max tier, prefers the largest combo that is not full yet, and places the white paper between two items of that combo — e.g. auto-fills STURDY 9/10 → 10/10
   - **Glowing hourglass: automatically placed left of the magic book with the longest cooldown** (the magic book on its right gains +30/60/100% cooldown recovery)
+  - **Multipurpose Belt support**: when the belt is active, its effect stacks once per artifact in the top row — the sorter packs as many artifacts as possible into the top row
+  - **Low-level-value charms**: items like Shadow Eye, Lizard Plate Armor and Fault Detection Probe gain almost nothing from levels — their level score is discounted, they only need to stay active (level ≥ 0)
+  - **Minimum-level targets**: Galaxy Sheet Music is forced to top priority and guaranteed to reach effective level 2
   - Negative items like Mind Burden are forced into the worst (negative-level) cells
   - Mystic ×2 cells (unlocked at 2 / 5 mystic items)
   - Configurable fixed-row items
@@ -48,7 +52,7 @@ Press **F8** to arrange your bag: before on the left, after on the right (instal
 
 ### Option 1: Full package (recommended, easiest)
 
-1. Open **Releases** (top right of this page) and download the latest full package (file name like `SephiriaBackpackOrganizer-v2.4.3.zip`)
+1. Open **Releases** (top right of this page) and download the latest full package (file name like `SephiriaBackpackOrganizer-v2.5.0.zip`)
 2. Unzip it — you will get a `BepInEx` folder, `winhttp.dll` and other files
 3. Copy everything into your game folder: in Steam, right-click *Sephiria* → Manage → Browse local files, and paste over it
 4. Launch the game from Steam, then press **F8** in-game to sort your bag
@@ -75,12 +79,17 @@ Delete `游戏目录/BepInEx/plugins/SephiriaBackpackOrganizer.dll`; to remove t
 | Enhanced | Iterations | 3000 | Simulated-annealing iterations |
 | Enhanced | Temperature | 800 | Initial temperature (higher = easier to escape local optima) |
 | Priority | Enable | true | Priority system (Legend=1 … Common=4) |
+| Priority | CompassTargetForcedHigh | true | The artifact locked by the golden needle gets top priority regardless of rarity |
+| Priority | LowLevelValueItems | Shadow Eye / Lizard Plate Armor / Fault Detection Probe | Charms whose level score is discounted (only need to be active) |
+| Priority | MinLevelItems | Galaxy Sheet Music=2 | Charms that must reach a minimum effective level first |
 | Synergy | PlanetBonus | 40000 | Bonus per planet clustered around the telescope |
 | Synergy | HarmonyLevelBonus | 2000 | Bonus per charm level around a harmony crystal |
 | Synergy | DedicationCompanionBonus | 3000 | Bonus per companion on the dedication badge's row |
 | Synergy | HourglassBonus | 6000 | Bonus per second of the magic book's CD on the hourglass's right |
 | Synergy | WhitePaperComboBonus | 5000 | Scoring weight for filling the largest not-yet-full combo with a white paper |
 | Synergy | CompassBonus | 12000 | Reward for a compass keeping its original target (unpaired ones auto-pair); 0 does not disable original-target binding |
+| Synergy | BeltItems | Multipurpose Belt | Belt-style charm keys; when active, the sorter packs the top row with artifacts |
+| Synergy | BeltRowBonus | 2500 | Bonus per artifact in the top row while a belt is active |
 | Burden | NegativeCellPenalty | 20000 | Penalty when a burden is not on a negative cell |
 | Mystic | Enable | true | Mystic ×2 cells |
 

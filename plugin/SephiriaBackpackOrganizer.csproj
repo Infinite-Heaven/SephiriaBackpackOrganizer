@@ -5,7 +5,7 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>SephiriaBackpackOrganizer</AssemblyName>
     <RootNamespace>SephiriaBackpackOrganizer</RootNamespace>
-    <Version>2.4.3</Version>
+    <Version>2.5.0</Version>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <DebugType>embedded</DebugType>
     <!-- 隐藏本机构建路径（异常堆栈不泄露 C:\Users\... 等绝对路径） -->

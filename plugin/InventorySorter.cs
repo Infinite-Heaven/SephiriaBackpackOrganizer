@@ -191,6 +191,10 @@ namespace SephiriaBackpackOrganizer
             public bool isCompass;          // Charm_UpCharmDamage（指北针）
             public bool isAttackable;       // IAttackableCharm
             public bool isWhitePaper;       // Charm_WhitePaper（白纸：左右相邻神器共享分类时复制该连击）
+            public bool isBelt;             // Charm_WoodenBox 类（多用途腰带/木箱：最上行每件神器效果叠加一次）
+            public bool lowLevelValue;      // 等级价值低（闪烁的眼睛/故障探测针等：等级分打折，只求启用）
+            public int minDesiredLevel;     // 必须优先达到的最低有效等级（谱子「银河」=2）
+            public float levelScoreFactor = 1f; // 等级分系数（低价值物品 <1）
             public HashSet<string> comboCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public CharmPositionKind kind;
             public EItemRarity rarity;
@@ -274,6 +278,7 @@ namespace SephiriaBackpackOrganizer
             public int[] compassRootScratch = new int[0];
             public List<WhitePaperComboTarget> whitePaperTargets = new List<WhitePaperComboTarget>();
             public int[] whitePaperAssignmentScratch = new int[0];
+            public bool hasBelt;              // 背包里存在多用途腰带类藏品（Charm_WoodenBox）
             public int[] mysticFactor = new int[0]; // 神秘地块等级倍率（默认 1；神秘藏品≥2时1格×2，≥5时4格×2）
             public int mysticCount;                  // 神秘分类藏品数量（游戏组合计数）
             public int mysticActiveCells;            // 实际生效的 ×2 地块数
@@ -374,6 +379,7 @@ namespace SephiriaBackpackOrganizer
                     info.isAttackable = s.charm is IAttackableCharm ac && ac.IsAttackableCharm();
                     info.isWhitePaper = s.charm is Charm_WhitePaper;
                     info.isCyclicRowCategory = s.charm is Charm_3Elemental_ByRow;
+                    info.isBelt = s.charm is Charm_WoodenBox;
                 }
 
                 try
@@ -413,6 +419,17 @@ namespace SephiriaBackpackOrganizer
                                 }
                             }
 
+                            // 多用途腰带类识别（Charm_WoodenBox 类已自动覆盖；key 支持扩展，如木箱 Item_WoodenBox_Name）
+                            foreach (string key in plugin.BeltItems.Value.Split(new[] { ',', ';' },
+                                         StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                if (MatchesItemKey(info, key))
+                                {
+                                    info.isBelt = true;
+                                    break;
+                                }
+                            }
+
                             // 用户优先级：稀有度映射 + 强制最高优先级物品
                             if (plugin.PriorityEnable.Value)
                             {
@@ -422,6 +439,31 @@ namespace SephiriaBackpackOrganizer
                                 {
                                     if (info.entity.aName.key.Trim() == key.Trim())
                                     {
+                                        info.priority = 1;
+                                        break;
+                                    }
+                                }
+                                // 低等级价值物品（闪烁的眼睛/故障探测针：等级分打折 + 优先级降到4级）
+                                foreach (string key in plugin.PriorityLowValueItems.Value.Split(new[] { ',', ';' },
+                                             StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    if (MatchesItemKey(info, key))
+                                    {
+                                        info.lowLevelValue = true;
+                                        info.priority = 4;
+                                        info.levelScoreFactor = Mathf.Clamp(plugin.LowValueLevelFactor.Value, 0f, 1f);
+                                        break;
+                                    }
+                                }
+                                // 最低等级目标（谱子「银河」=2：强制最高优先级 + 等级不足额外扣分）
+                                foreach (string kv in plugin.PriorityMinLevelItems.Value.Split(new[] { ',', ';' },
+                                             StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    string[] parts = kv.Split('=');
+                                    if (parts.Length == 2 && MatchesItemKey(info, parts[0]) &&
+                                        int.TryParse(parts[1].Trim(), out int minLvl) && minLvl > 0)
+                                    {
+                                        info.minDesiredLevel = minLvl;
                                         info.priority = 1;
                                         break;
                                     }
@@ -532,6 +574,7 @@ namespace SephiriaBackpackOrganizer
 
                 ctx.items.Add(info);
                 ctx.itemByInstance[s.instanceID] = info;
+                if (info.isBelt) ctx.hasBelt = true;
                 if (info.isWhitePaper) ctx.whitePapers.Add(info);
                 if (info.isBurden) ctx.burdens.Add(info);
                 else if (info.isStele) ctx.steles.Add(info);
@@ -541,6 +584,20 @@ namespace SephiriaBackpackOrganizer
 
             ConfigureCyclicRowCategories(ctx);
             CaptureCompassBindings(ctx, original);
+
+            // 被北向的金色针（指北针）锁定的目标神器强制最高优先级：无论稀有度，优先拉满等级。
+            // 已绑定的针只会指向整理前的同一实例，因此这里提升的就是该实例。
+            if (plugin.PriorityEnable.Value && plugin.CompassTargetForcedHigh.Value)
+            {
+                foreach (int targetId in ctx.compassTargetByInstance.Values)
+                {
+                    if (ctx.itemByInstance.TryGetValue(targetId, out ItemInfo target) && target != null)
+                    {
+                        target.priority = 1;
+                    }
+                }
+            }
+
             BuildWhitePaperTargets(ctx);
 
             // 预计算每块石板的全部摆放模板（以石板实例ID为键）
@@ -1667,7 +1724,7 @@ namespace SephiriaBackpackOrganizer
                 {
                     int eff = Mathf.Clamp(lvl, 0, info.maxLevel);
                     // 指北针：效果只在配对时生效，未配对时等级分大幅打折
-                    double levelScore = eff * 10000 * PriorityWeight(info.priority);
+                    double levelScore = eff * 10000 * PriorityWeight(info.priority) * info.levelScoreFactor;
                     if (info.isCompass && compassPaired != null && !compassPaired[cell])
                     {
                         levelScore *= plugin.CompassUnpairedFactor.Value;
@@ -1676,6 +1733,11 @@ namespace SephiriaBackpackOrganizer
                     if (lvl > info.maxLevel)
                     {
                         score += lvl - info.maxLevel; // 溢出小奖励（镜像游戏）
+                    }
+                    // 最低等级目标（谱子「银河」=2）：有效等级不足时按缺额额外扣分，保证优先拉到目标等级。
+                    if (info.minDesiredLevel > 0 && eff < info.minDesiredLevel)
+                    {
+                        score -= (info.minDesiredLevel - eff) * 10000d * PriorityWeight(info.priority);
                     }
                 }
                 else
@@ -1887,6 +1949,50 @@ namespace SephiriaBackpackOrganizer
                 }
             }
 
+            // 多用途腰带（Charm_WoodenBox 类）：启用时，背包最上行(y=0)每有一件神器，效果叠加一次。
+            // 评分奖励第一行神器数量，引导搜索把神器堆满第一行（多块腰带只按一块计，避免重复叠加）。
+            if (ctx.hasBelt && plugin.BeltRowBonus.Value > 0f)
+            {
+                for (int cell = 0; cell < storage; cell++)
+                {
+                    Slot bs = slots[cell];
+                    if (bs == null || !bs.hasItem || bs.charm == null)
+                    {
+                        continue;
+                    }
+                    if (!ctx.itemByInstance.TryGetValue(bs.instanceID, out ItemInfo belt) ||
+                        belt == null || !belt.isBelt)
+                    {
+                        continue;
+                    }
+                    bool bEnabled = !disabled[cell] &&
+                                    ((level[cell] + belt.enchant) * ctx.mysticFactor[cell]) >= 0 &&
+                                    CriteriaSatisfied(ctx, belt, slots, ignore[cell], cell) &&
+                                    (!belt.slot.charm.isWeaponRelatedCharm ||
+                                     (belt.slot.charm.WeaponController != null &&
+                                      belt.slot.charm.WeaponController.currentWeapon != null &&
+                                      belt.slot.charm.WeaponController.currentWeapon.weaponType == belt.slot.charm.relatedWeapon));
+                    if (!bEnabled)
+                    {
+                        continue;
+                    }
+                    int firstRowArtifacts = 0;
+                    int rowEnd = Math.Min(storage, ctx.width);
+                    for (int c = 0; c < rowEnd; c++)
+                    {
+                        Slot rs = slots[c];
+                        if (rs != null && rs.hasItem && rs.charm != null &&
+                            ctx.itemByInstance.TryGetValue(rs.instanceID, out ItemInfo ri) &&
+                            ri != null && !ri.isBurden)
+                        {
+                            firstRowArtifacts++;
+                        }
+                    }
+                    score += plugin.BeltRowBonus.Value * firstRowArtifacts;
+                    break;
+                }
+            }
+
             // 指北针：整理前已配对的针只给原目标加成，并随原目标移动；未配对的针仍可自动
             // 寻找任意伤害类藏品或另一块指北针（可链式叠加）。
             // 注意：游戏 OnRequestCharmDamageBonus 无 IsEffectEnabled 检查——指北针即使在负等级格上也给上方藏品加成，
@@ -1924,6 +2030,27 @@ namespace SephiriaBackpackOrganizer
             score += EvaluateWhitePaperSynergy(ctx, slots);
 
             return score;
+        }
+
+        /// <summary>物品是否匹配配置 token：LocalizedString key 或护符类名（大小写不敏感，如 Charm_ShadowEye）。</summary>
+        private static bool MatchesItemKey(ItemInfo info, string token)
+        {
+            token = token.Trim();
+            if (token.Length == 0)
+            {
+                return false;
+            }
+            if (info.entity != null && info.entity.aName != null &&
+                string.Equals(info.entity.aName.key, token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            if (info.slot != null && info.slot.charm != null &&
+                string.Equals(info.slot.charm.GetType().Name, token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            return false;
         }
 
         /// <summary>稀有度 → 用户优先级（1最高~4最低）：传说/羁绊(永恒)=1 稀有=2 高级=3 普通=4。</summary>
@@ -2100,6 +2227,22 @@ namespace SephiriaBackpackOrganizer
                     }
                 }
 
+                if (it.isBelt)
+                {
+                    int firstRow = 0;
+                    for (int c = 0; c < Math.Min(ctx.storage, w); c++)
+                    {
+                        Slot rs = slots[c];
+                        if (rs != null && rs.hasItem && rs.charm != null &&
+                            ctx.itemByInstance.TryGetValue(rs.instanceID, out ItemInfo ri) &&
+                            ri != null && !ri.isBurden)
+                        {
+                            firstRow++;
+                        }
+                    }
+                    Plugin.Log.LogInfo($"{tag} 腰带@{x},{y}：第一行神器 {firstRow} 件");
+                }
+
                 if (it.isCyclicRowCategory)
                 {
                     int categoryIndex = y % CyclicRowCategories.Length;
@@ -2164,6 +2307,7 @@ namespace SephiriaBackpackOrganizer
             int weaponRelated = 0, weaponMatched = 0;
             int dedicationBadges = 0, dedicationCompanions = 0;
             int hourglasses = 0, magicBooks = 0;
+            int belts = 0, lowValue = 0, minLevel = 0;
             int[] rarityCount = new int[5];
             int[] priorityCount = new int[5];
             foreach (ItemInfo it in ctx.items)
@@ -2178,6 +2322,9 @@ namespace SephiriaBackpackOrganizer
                 if (it.isDedicationCompanion) dedicationCompanions++;
                 if (it.isHourglass) hourglasses++;
                 if (it.isMagicBook) magicBooks++;
+                if (it.isBelt) belts++;
+                if (it.lowLevelValue) lowValue++;
+                if (it.minDesiredLevel > 0) minLevel++;
                 if (it.isCharm && !it.isBurden)
                 {
                     rarityCount[(int)it.rarity]++;
@@ -2202,23 +2349,21 @@ namespace SephiriaBackpackOrganizer
                 $" 附魔{enchanted}件(+{enchantSum}) 武器相关{weaponRelated}(匹配{weaponMatched})" +
                 $" 奉献徽章{dedicationBadges} 同伴{dedicationCompanions}" +
                 $" 沙漏{hourglasses} 魔法书{magicBooks} 白纸{ctx.whitePapers.Count}" +
+                $" 腰带{belts} 低等级价值{lowValue} 最低等级目标{minLevel}" +
                 $" 优先级[P1:{priorityCount[1]} P2:{priorityCount[2]} P3:{priorityCount[3]} P4:{priorityCount[4]}]" +
                 $" 稀有度[普通{rarityCount[0]} 优秀{rarityCount[1]} 稀有{rarityCount[2]} 传说{rarityCount[3]} 永恒{rarityCount[4]}]");
 
-            // 诊断：打印护符的实际标签（排查标签名是否与配置一致）
+            // 诊断：打印全部护符的 LocalizedString key 与类名（用于往配置里填 key）
             var tagList = new System.Text.StringBuilder();
-            int shown = 0;
             foreach (ItemInfo it in ctx.charms)
             {
-                if (it.entity != null && it.entity.categories != null && it.entity.categories.Count > 0 && shown < 6)
-                {
-                    tagList.Append($" [{it.entity.aName?.key}→{string.Join("/", it.entity.categories)}]");
-                    shown++;
-                }
+                string typeName = it.slot != null && it.slot.charm != null ? it.slot.charm.GetType().Name : "?";
+                string key = it.entity != null && it.entity.aName != null ? it.entity.aName.key : "?";
+                tagList.Append($" [{key}|{typeName}]");
             }
             if (tagList.Length > 0)
             {
-                Plugin.Log.LogInfo($"护符标签{tagList}");
+                Plugin.Log.LogInfo($"护符清单（key|类名）:{tagList}");
             }
             if (ctx.whitePapers.Count > 0)
             {
@@ -2737,6 +2882,10 @@ namespace SephiriaBackpackOrganizer
                 int level = ctx.cellLevel[cell];
                 // 和谐之晶邻域：高等级护符优先聚到它周围8格
                 float sc = level * 100f * ctx.mysticFactor[cell] - (ctx.disabled[cell] ? 500f : 0f);
+                if (ctx.hasBelt && y == 0)
+                {
+                    sc += 6000f; // 腰带在场：神器优先塞满第一行
+                }
                 if (harmonyNeighbors != null && harmonyNeighbors.Contains(cell))
                 {
                     sc += 8000f;
