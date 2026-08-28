@@ -65,6 +65,18 @@ Press **F8** to arrange your bag: before on the left, after on the right (instal
 
 > The full package already bundles the BepInEx 6 framework and the plugin itself — nothing else to install; re-installing is safe, just overwrite.
 
+### Option 2: macOS
+
+The full package above is for Windows. For the native macOS build, see
+[macos/README.md](../macos/README.md):
+
+```sh
+cd macos && ./install.sh
+```
+
+The script downloads that same full package, builds the loader macOS needs, and installs it.
+Note that on macOS the hotkey is **fn + F8** (plain F8 is a system media key) — the document explains why.
+
 ### Uninstall
 
 Delete `游戏目录/BepInEx/plugins/SephiriaBackpackOrganizer.dll`; to remove the framework completely as well, also delete the whole `BepInEx` folder plus `winhttp.dll` and `doorstop_config.ini` (only if you have not installed other BepInEx plugins).

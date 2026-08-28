@@ -65,6 +65,18 @@
 
 > 전체 패키지에는 BepInEx 6 프레임워크와 플러그인 자체가 포함되어 있습니다 — 추가로 설치할 것이 없습니다. 재설치해도 안전하며 그냥 덮어쓰면 됩니다.
 
+### 방법 2: macOS
+
+위 전체 패키지는 Windows용입니다. macOS 네이티브 버전은
+[macos/README.md](../macos/README.md)를 참고하세요:
+
+```sh
+cd macos && ./install.sh
+```
+
+스크립트가 같은 전체 패키지를 내려받고, macOS에 필요한 로더를 빌드해서 설치까지 해 줍니다.
+macOS에서는 단축키가 **fn + F8**입니다 (F8 단독은 시스템 미디어 키). 이유는 해당 문서에 있습니다.
+
 ### 제거
 
 `게임 폴더/BepInEx/plugins/SephiriaBackpackOrganizer.dll`을 삭제하세요. 프레임워크까지 완전히 제거하려면 `BepInEx` 폴더 전체와 `winhttp.dll`, `doorstop_config.ini`도 삭제하세요 (다른 BepInEx 플러그인을 설치하지 않은 경우에만).
