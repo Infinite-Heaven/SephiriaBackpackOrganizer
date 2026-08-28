@@ -46,6 +46,8 @@ namespace SephiriaBackpackOrganizer
             "坚固", "余烬", "冰川", "魔法科技"
         };
 
+        private const double ManualPriorityRankDecay = 200d;
+
         private readonly Plugin plugin;
         private bool busy;
         private float sessionStartTime = -1f;
@@ -1916,11 +1918,14 @@ namespace SephiriaBackpackOrganizer
                     double levelScore = eff * 10000 * PriorityWeight(info.priority) * info.levelScoreFactor;
                     if (info.manualPriorityRank > 0)
                     {
-                        // 后点的排名更高：P1 获得完整强度，P2/P3…按平方衰减。
-                        // 使用独立加分而非乘稀有度权重，确保 P1 的手动权重始终高于 P2。
+                        // 后点的排名更高：P1 获得完整强度，P2/P3…每级固定递减 200 分。
+                        // 使用独立加分而非乘稀有度权重，确保手动提权始终有效。
                         // 只增加“等级价值”，不会绕过位置、禁用、固定行等硬约束。
                         double rank = info.manualPriorityRank;
-                        levelScore += eff * 10000d * ctx.manualPriorityStrength / (rank * rank);
+                        double manualPerLevel = Math.Max(
+                            0d,
+                            ctx.manualPriorityStrength - (rank - 1d) * ManualPriorityRankDecay);
+                        levelScore += eff * manualPerLevel;
                     }
                     if (info.isCompass && compassPaired != null && !compassPaired[cell])
                     {
@@ -1940,6 +1945,16 @@ namespace SephiriaBackpackOrganizer
                 else
                 {
                     score -= 750;
+                }
+
+                // 负等级是扣分：提权神器按其排名的每级提权分扣除，不能被 enabled 门槛吞掉。
+                if (info.manualPriorityRank > 0 && lvl < 0)
+                {
+                    double rank = info.manualPriorityRank;
+                    double manualPerLevel = Math.Max(
+                        0d,
+                        ctx.manualPriorityStrength - (rank - 1d) * ManualPriorityRankDecay);
+                    score += lvl * manualPerLevel;
                 }
 
                 if (lvl < 0)
@@ -4111,14 +4126,6 @@ namespace SephiriaBackpackOrganizer
             }
 
             float finalGameScore = SafeScore(state.inv);
-            bool gameScoreWorse = !float.IsNaN(state.beforeGameScore) && !float.IsNaN(finalGameScore) &&
-                                  finalGameScore < state.beforeGameScore - 0.5f;
-            if (!state.rollingBack && gameScoreWorse)
-            {
-                Plugin.Log.LogWarning($"整理结果游戏评分下降 {state.beforeGameScore:F0} -> {finalGameScore:F0}，正在分帧回滚。");
-                BeginMovePlan(state, actual, state.original, true);
-                return;
-            }
 
             double finalOffline = EvaluateLayout(state.ctx, actual);
             if (plugin.VerboseDiagnostics.Value)

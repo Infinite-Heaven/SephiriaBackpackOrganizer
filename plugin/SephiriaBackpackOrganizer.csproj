@@ -5,7 +5,7 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>SephiriaBackpackOrganizer</AssemblyName>
     <RootNamespace>SephiriaBackpackOrganizer</RootNamespace>
-    <Version>2.5.0</Version>
+    <Version>2.5.1</Version>
     <GameDirectory Condition="'$(GameDirectory)' == ''">E:\steam\steamapps\common\Sephiria</GameDirectory>
     <BepInExCoreDirectory Condition="'$(BepInExCoreDirectory)' == ''">$(GameDirectory)\BepInEx\core</BepInExCoreDirectory>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

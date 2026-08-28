@@ -193,9 +193,9 @@ namespace SephiriaBackpackOrganizer
             ShowManualPriorityBadge = Config.Bind("ManualPriority", "ShowBadge", true,
                 "在已提权神器左下角显示透明小字 P1、P2…；P1 是最后提权、权重最高的神器");
 
-            ManualPriorityStrength = Config.Bind("ManualPriority", "Strength", 50f,
-                new ConfigDescription("手动提权对神器等级评分的额外强度。P1 完整获得，P2 按 1/4、P3 按 1/9 衰减",
-                    new AcceptableValueRange<float>(1f, 500f)));
+            ManualPriorityStrength = Config.Bind("ManualPriority", "Strength", 6000f,
+                new ConfigDescription("手动提权对神器每个等级的额外奖励/扣分。P1 为 6000 分，P2/P3…每级固定递减 200 分，负等级按相同数值扣分",
+                    new AcceptableValueRange<float>(1f, 100000f)));
 
             VerboseDiagnostics = Config.Bind("Debug", "VerboseDiagnostics", false,
                 "输出完整物品识别、布局网格和特殊机制分析。关闭可减少每次整理后的额外评分与日志开销");
@@ -537,6 +537,6 @@ namespace SephiriaBackpackOrganizer
     {
         public const string PLUGIN_GUID = "com.sephiria.backpack-organizer";
         public const string PLUGIN_NAME = "Sephiria Backpack Organizer";
-        public const string PLUGIN_VERSION = "2.5.0";
+        public const string PLUGIN_VERSION = "2.5.1";
     }
 }
