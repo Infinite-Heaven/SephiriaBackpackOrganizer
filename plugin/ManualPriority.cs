@@ -8,58 +8,65 @@ using UnityEngine.EventSystems;
 namespace SephiriaBackpackOrganizer
 {
     /// <summary>
-    /// 当前游戏会话的手动提权顺序。列表从旧到新保存；显示排名时最后一项为 P1。
+    /// 当前游戏会话的手动优先级。每件物品独立循环：未点击=默认(0) → P1 → P2 → P3 → P4 → 未点击。
+    /// 手动优先级（1~4）直接映射到插件优先级系统（priority 1~4），覆盖稀有度默认排序，
+    /// 因此排序时完全复用原有的"优先级→排序/评分"逻辑，不需要额外提权加分。
     /// 只在点击、会话切换和整理快照构建时更新，不做每帧配置/背包扫描。
     /// </summary>
     internal static class ManualPriorityManager
     {
-        private static readonly List<int> OrderedInstanceIds = new List<int>();
-        internal static int Count => OrderedInstanceIds.Count;
+        private const int MaxRank = 4;
 
+        /// <summary>instanceID -> 手动优先级（1~4；不在字典里=默认优先级）。</summary>
+        private static readonly Dictionary<int, int> RankByInstance = new Dictionary<int, int>();
+        internal static int Count => RankByInstance.Count;
+
+        /// <summary>点击一次循环推进：0(默认)→1(P1)→2(P2)→3(P3)→4(P4)→0(取消)。返回新优先级。</summary>
         internal static int Toggle(int instanceId)
         {
-            int existing = OrderedInstanceIds.IndexOf(instanceId);
-            if (existing >= 0)
+            int next = GetRank(instanceId) + 1;
+            if (next > MaxRank)
             {
-                OrderedInstanceIds.RemoveAt(existing);
+                RankByInstance.Remove(instanceId);
                 return 0;
             }
-
-            OrderedInstanceIds.Add(instanceId);
-            return 1;
+            RankByInstance[instanceId] = next;
+            return next;
         }
 
         internal static int GetRank(int instanceId)
         {
-            int index = OrderedInstanceIds.IndexOf(instanceId);
-            return index < 0 ? 0 : OrderedInstanceIds.Count - index;
+            return RankByInstance.TryGetValue(instanceId, out int rank) ? rank : 0;
         }
 
         internal static Dictionary<int, int> PruneAndSnapshot(HashSet<int> presentCharmIds)
         {
-            for (int i = OrderedInstanceIds.Count - 1; i >= 0; i--)
+            if (presentCharmIds != null)
             {
-                if (presentCharmIds == null || !presentCharmIds.Contains(OrderedInstanceIds[i]))
+                var stale = new List<int>();
+                foreach (KeyValuePair<int, int> kv in RankByInstance)
                 {
-                    OrderedInstanceIds.RemoveAt(i);
+                    if (!presentCharmIds.Contains(kv.Key))
+                    {
+                        stale.Add(kv.Key);
+                    }
+                }
+                foreach (int id in stale)
+                {
+                    RankByInstance.Remove(id);
                 }
             }
 
-            var result = new Dictionary<int, int>(OrderedInstanceIds.Count);
-            for (int i = 0; i < OrderedInstanceIds.Count; i++)
-            {
-                result[OrderedInstanceIds[i]] = OrderedInstanceIds.Count - i;
-            }
-            return result;
+            return new Dictionary<int, int>(RankByInstance);
         }
 
         internal static void Clear()
         {
-            if (OrderedInstanceIds.Count == 0)
+            if (RankByInstance.Count == 0)
             {
                 return;
             }
-            OrderedInstanceIds.Clear();
+            RankByInstance.Clear();
             RefreshVisibleBadges();
         }
 
@@ -188,12 +195,11 @@ namespace SephiriaBackpackOrganizer
                 return false;
             }
 
-            bool selected = ManualPriorityManager.Toggle(item.InstanceID) != 0;
+            int rank = ManualPriorityManager.Toggle(item.InstanceID);
             int shown = ManualPriorityManager.RefreshVisibleBadges();
-            int rank = ManualPriorityManager.GetRank(item.InstanceID);
-            Plugin.Log.LogInfo(selected
-                ? $"神器手动提权：instance={item.InstanceID}，当前 P{rank}；已提权 {ManualPriorityManager.Count} 件，界面标记 {shown} 个"
-                : $"已取消神器手动提权：instance={item.InstanceID}；剩余 {ManualPriorityManager.Count} 件，界面标记 {shown} 个");
+            Plugin.Log.LogInfo(rank > 0
+                ? $"手动优先级：instance={item.InstanceID} → P{rank}（已设置 {ManualPriorityManager.Count} 件，界面标记 {shown} 个）"
+                : $"手动优先级：instance={item.InstanceID} → 已取消（恢复默认优先级；剩余 {ManualPriorityManager.Count} 件，界面标记 {shown} 个）");
             return false;
         }
     }

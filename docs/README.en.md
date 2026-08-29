@@ -9,8 +9,8 @@
 
 A BepInEx plugin for *Sephiria* (Steam AppID 2436940). Press **F8** to auto-arrange your inventory so all the synergy mechanics trigger at once: tablet coverage, charm position conditions, planet clusters, harmony crystals, dedication badges, the Kelsardanni Key cycle rows, compass original-target binding, white-paper combo filling and the glowing hourglass.
 
-- Version: v2.5.1
-- Bug fix: manually prioritized artifacts are no longer incorrectly rolled back when the native game score drops; P1/P2/P3 now contribute 6000/5800/5600 per level, with matching penalties for negative levels
+- Version: v2.5.2
+- **Manual priority logic rewritten**: middle-click cycles P1 → P2 → P3 → P4 per artifact independently; clicking once more clears it back to the default priority
 - Runtime: BepInEx 6 (Unity Mono) / Unity 6000.3.21f1 / Mirror multiplayer
 - Works for solo, host and multiplayer clients
 
@@ -26,7 +26,7 @@ Press **F8** to arrange your bag: before on the left, after on the right (instal
 ## Features
 
 - **One-key arrangement**: press F8 to re-arrange the bag; a "done" toast appears when finished
-- **Manual priority**: middle-click an artifact to toggle priority; the latest selection is P1, followed by P2/P3, with a small transparent marker at the lower-left of its icon
+- **Manual priority (rewritten)**: middle-click an artifact to cycle P1 → P2 → P3 → P4 → cleared (back to default), independently per artifact, with a small transparent marker at the lower-left of its icon. The manual priority directly overrides the default sorting priority and reuses the normal priority logic
 - **Background search + frame-sliced apply**: host and clients search in the background, then apply swaps/rotations in validated per-frame batches with safe rollback
 - **Fully offline scoring model**: simulates the game's real bonus formulas on a copy of your bag — any layout gets a score, and the search optimizes that score
 - **Multi-round simulated annealing**: 4 independent search rounds (different random seeds) per press, taking the global best; a full 34-slot bag takes about 200–300 ms
@@ -58,7 +58,7 @@ Press **F8** to arrange your bag: before on the left, after on the right (instal
 
 ### Option 1: Full package (recommended, easiest)
 
-1. Open **Releases** (top right of this page) and download the latest full package (file name like `SephiriaBackpackOrganizer-v2.5.1.zip`)
+1. Open **Releases** (top right of this page) and download the latest full package (file name like `SephiriaBackpackOrganizer-v2.5.2.zip`)
 2. Unzip it — you will get a `BepInEx` folder, `winhttp.dll` and other files
 3. Copy everything into your game folder: in Steam, right-click *Sephiria* → Manage → Browse local files, and paste over it
 4. Launch the game from Steam, then press **F8** in-game to sort your bag
@@ -72,7 +72,7 @@ Delete `游戏目录/BepInEx/plugins/SephiriaBackpackOrganizer.dll`; to remove t
 ## Usage
 
 - Press **F8** in game to sort your bag; a "done" toast appears when finished
-- Middle-click an artifact in the bag to toggle manual priority; later selections have higher priority, and middle-clicking it again cancels the selection
+- Middle-click an artifact in the bag to set manual priority: 1 click = P1, 2 = P2, 3 = P3, 4 = P4, one more click clears it; each artifact cycles independently
 - All settings live in `游戏目录/BepInEx/config/com.sephiria.backpack-organizer.cfg` — restart the game after editing
 
 ## Configuration

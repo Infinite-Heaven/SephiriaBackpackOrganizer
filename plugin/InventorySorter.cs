@@ -46,8 +46,6 @@ namespace SephiriaBackpackOrganizer
             "坚固", "余烬", "冰川", "魔法科技"
         };
 
-        private const double ManualPriorityRankDecay = 200d;
-
         private readonly Plugin plugin;
         private bool busy;
         private float sessionStartTime = -1f;
@@ -315,7 +313,6 @@ namespace SephiriaBackpackOrganizer
             public int annealStartsCompleted;
             public bool searchBudgetReached;
             public int manualPriorityCount;
-            public double manualPriorityStrength;
         }
 
         private sealed class SearchOutcome
@@ -414,8 +411,7 @@ namespace SephiriaBackpackOrganizer
                 compassPairedScratch = new bool[storage],
                 itemIndexScratch = new int[storage],
                 emptyIndexScratch = new int[storage],
-                mysticFactor = new int[storage],
-                manualPriorityStrength = Math.Max(1d, plugin.ManualPriorityStrength.Value)
+                mysticFactor = new int[storage]
             };
 
             var presentCharmIds = new HashSet<int>();
@@ -429,8 +425,6 @@ namespace SephiriaBackpackOrganizer
             }
             Dictionary<int, int> manualPriorityRanks = ManualPriorityManager.PruneAndSnapshot(presentCharmIds);
             ctx.manualPriorityCount = manualPriorityRanks.Count;
-
-            // 分类物品
             for (int i = 0; i < original.Count && i < storage; i++)
             {
                 Slot s = original[i];
@@ -707,6 +701,13 @@ namespace SephiriaBackpackOrganizer
                 }
                 catch
                 {
+                }
+
+                // 手动优先级：用户中键循环设定的 P1~P4 直接覆盖上面所有默认优先级计算
+                // （稀有度映射 / 强制最高 / 低价值降级 / 强制指定等），排序与评分完全复用原优先级逻辑。
+                if (info.manualPriorityRank > 0)
+                {
+                    info.priority = Mathf.Clamp(info.manualPriorityRank, 1, 4);
                 }
 
                 ctx.items.Add(info);
@@ -1916,17 +1917,6 @@ namespace SephiriaBackpackOrganizer
                     int eff = Mathf.Clamp(lvl, 0, info.maxLevel);
                     // 指北针：效果只在配对时生效，未配对时等级分大幅打折
                     double levelScore = eff * 10000 * PriorityWeight(info.priority) * info.levelScoreFactor;
-                    if (info.manualPriorityRank > 0)
-                    {
-                        // 后点的排名更高：P1 获得完整强度，P2/P3…每级固定递减 200 分。
-                        // 使用独立加分而非乘稀有度权重，确保手动提权始终有效。
-                        // 只增加“等级价值”，不会绕过位置、禁用、固定行等硬约束。
-                        double rank = info.manualPriorityRank;
-                        double manualPerLevel = Math.Max(
-                            0d,
-                            ctx.manualPriorityStrength - (rank - 1d) * ManualPriorityRankDecay);
-                        levelScore += eff * manualPerLevel;
-                    }
                     if (info.isCompass && compassPaired != null && !compassPaired[cell])
                     {
                         levelScore *= plugin.CompassUnpairedFactor.Value;
@@ -1945,16 +1935,6 @@ namespace SephiriaBackpackOrganizer
                 else
                 {
                     score -= 750;
-                }
-
-                // 负等级是扣分：提权神器按其排名的每级提权分扣除，不能被 enabled 门槛吞掉。
-                if (info.manualPriorityRank > 0 && lvl < 0)
-                {
-                    double rank = info.manualPriorityRank;
-                    double manualPerLevel = Math.Max(
-                        0d,
-                        ctx.manualPriorityStrength - (rank - 1d) * ManualPriorityRankDecay);
-                    score += lvl * manualPerLevel;
                 }
 
                 if (lvl < 0)
