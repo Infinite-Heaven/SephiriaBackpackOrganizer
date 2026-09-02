@@ -66,6 +66,17 @@
 
 > 完整包已经内置 BepInEx 6 框架和插件本体，**不需要再安装任何东西**；重复安装也不会冲突，直接覆盖即可。
 
+### 方式二：macOS
+
+上面的完整包是 Windows 版。macOS 原生版见 [macos/README.md](../macos/README.md)：
+
+```sh
+cd macos && ./install.sh
+```
+
+脚本会自动下载同一个完整包、编译 macOS 需要的注入库并装好。
+注意 macOS 上快捷键是 **fn + F8**（F8 默认是系统媒体键），原因见该文档。
+
 ### 卸载
 
 删除 `游戏目录/BepInEx/plugins/SephiriaBackpackOrganizer.dll` 即可；若想连同框架一起彻底移除，再删除整个 `BepInEx` 文件夹以及 `winhttp.dll`、`doorstop_config.ini`（只装过本插件时可以这样做）。
