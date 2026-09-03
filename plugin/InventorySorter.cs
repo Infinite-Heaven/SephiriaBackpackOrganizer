@@ -282,6 +282,19 @@ namespace SephiriaBackpackOrganizer
             public Dictionary<int, ItemInfo> itemByInstance = new Dictionary<int, ItemInfo>(); // instanceID -> ItemInfo
             // 仅记录整理前已经配对的指北针：compass instanceID -> 原先正上方目标 instanceID。
             public Dictionary<int, int> compassTargetByInstance = new Dictionary<int, int>();
+            // 用户手动摆放形成的绑定（参照指北针）：整理前沙漏已在某魔法书左侧 / 碎片已在某魔法书右侧时记录。
+            // hourglassTargetByInstance: 沙漏 instanceID -> 其右侧魔法书 instanceID（整理后沙漏仍放该书左侧）
+            // rayShardTargetByInstance:  碎片 instanceID -> 其左侧魔法书 instanceID（整理后碎片仍放该书右侧）
+            public Dictionary<int, int> hourglassTargetByInstance = new Dictionary<int, int>();
+            public Dictionary<int, int> rayShardTargetByInstance = new Dictionary<int, int>();
+            // Ctrl+中键设置的方向绑定：directionBindingTargetByInstance[itemID] = 绑定对象 instanceID；
+            // directionBindingDirByInstance[itemID] = 绑定方向（ManualBindDirection）。整理后 item 必须仍
+            // 处于绑定对象的该方向一侧并相邻。只有用户设了方向且整理前该方向相邻格确实有护符时才记录。
+            // 左右(←→)模式：bothLeftByInstance/bothRightByInstance 分别记录左右两个绑定对象（夹住不分离）。
+            public Dictionary<int, int> directionBindingTargetByInstance = new Dictionary<int, int>();
+            public Dictionary<int, ManualBindDirection> directionBindingDirByInstance = new Dictionary<int, ManualBindDirection>();
+            public Dictionary<int, int> bothLeftByInstance = new Dictionary<int, int>();
+            public Dictionary<int, int> bothRightByInstance = new Dictionary<int, int>();
             public List<CompassChain> compassChains = new List<CompassChain>();
             public HashSet<int> compassChainInstances = new HashSet<int>();
             public Dictionary<int, int> compassPositionScratch = new Dictionary<int, int>();
@@ -425,6 +438,7 @@ namespace SephiriaBackpackOrganizer
             }
             Dictionary<int, int> manualPriorityRanks = ManualPriorityManager.PruneAndSnapshot(presentCharmIds);
             ctx.manualPriorityCount = manualPriorityRanks.Count;
+            DirectionBindingManager.PruneAndSnapshot(presentCharmIds);
             for (int i = 0; i < original.Count && i < storage; i++)
             {
                 Slot s = original[i];
@@ -722,6 +736,9 @@ namespace SephiriaBackpackOrganizer
 
             ConfigureCyclicRowCategories(ctx);
             CaptureCompassBindings(ctx, original);
+            CaptureHourglassRayShardBindings(ctx, original);
+            CaptureDirectionBindings(ctx, original);
+            CaptureWhitePaperBindings(ctx, original);
 
             // 被北向的金色针（指北针）锁定的目标神器强制最高优先级：无论稀有度，优先拉满等级。
             // 已绑定的针只会指向整理前的同一实例，因此这里提升的就是该实例。
@@ -1034,6 +1051,12 @@ namespace SephiriaBackpackOrganizer
                     continue;
                 }
 
+                // 用户已用 Ctrl+中键给此罗盘设了方向绑定：以用户手动绑定为准，跳过指北针自动配对。
+                if (DirectionBindingManager.GetDirection(compassSlot.instanceID) != ManualBindDirection.None)
+                {
+                    continue;
+                }
+
                 Slot targetSlot = original[cell - ctx.width];
                 if (targetSlot == null || !targetSlot.hasItem || targetSlot.charm == null ||
                     !ctx.itemByInstance.TryGetValue(targetSlot.instanceID, out ItemInfo target) || target == null)
@@ -1080,6 +1103,169 @@ namespace SephiriaBackpackOrganizer
                 }
             }
             ctx.compassRootScratch = new int[ctx.compassChains.Count];
+        }
+
+        /// <summary>
+        /// 记录用户手动摆放形成的沙漏/碎片与魔法书的绑定（参照指北针原目标绑定）：
+        /// - 整理前若某沙漏的右侧一格就是魔法书 → 记录 hourglassTargetByInstance，整理后该沙漏仍放这本魔法书左侧；
+        /// - 整理前若某碎片的左侧一格就是魔法书 → 记录 rayShardTargetByInstance，整理后该碎片仍放这本魔法书右侧。
+        /// 未手动摆放（未被记录）的沙漏/碎片继续延用默认逻辑（沙漏找 CD 最长魔法书、碎片找耗蓝最高魔法书）。
+        /// </summary>
+        private static void CaptureHourglassRayShardBindings(SearchContext ctx, List<Slot> original)
+        {
+            int storage = Math.Min(ctx.storage, original != null ? original.Count : 0);
+            for (int cell = 0; cell < storage; cell++)
+            {
+                Slot slot = original[cell];
+                if (slot == null || !slot.hasItem || slot.charm == null ||
+                    !ctx.itemByInstance.TryGetValue(slot.instanceID, out ItemInfo info) || info == null)
+                {
+                    continue;
+                }
+
+                int x = cell % ctx.width;
+                int y = cell / ctx.width;
+
+                // 用户已用 Ctrl+中键给此物品设了方向绑定：以用户手动绑定为准，跳过沙漏/碎片的自动绑定。
+                if (DirectionBindingManager.GetDirection(slot.instanceID) != ManualBindDirection.None)
+                {
+                    continue;
+                }
+
+                if (info.isHourglass)
+                {
+                    // 沙漏：右侧一格是魔法书 → 绑定该书（沙漏始终放它左侧）
+                    Slot right = At(original, x + 1, y, ctx.width, ctx.storage);
+                    if (right != null && right.hasItem && right.charm != null &&
+                        ctx.itemByInstance.TryGetValue(right.instanceID, out ItemInfo rInfo) &&
+                        rInfo != null && rInfo.isMagicBook)
+                    {
+                        ctx.hourglassTargetByInstance[slot.instanceID] = right.instanceID;
+                    }
+                }
+                else if (info.isRayShard)
+                {
+                    // 碎片：左侧一格是魔法书 → 绑定该书（碎片始终放它右侧）
+                    Slot left = At(original, x - 1, y, ctx.width, ctx.storage);
+                    if (left != null && left.hasItem && left.charm != null &&
+                        ctx.itemByInstance.TryGetValue(left.instanceID, out ItemInfo lInfo) &&
+                        lInfo != null && lInfo.isMagicBook)
+                    {
+                        ctx.rayShardTargetByInstance[slot.instanceID] = left.instanceID;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 捕获 Ctrl+中键设置的 4 向绑定：对每件设了方向的护符，检查整理前该方向相邻格是否为另一件护符。
+        /// 是 → 记录绑定（整理后本物品必须仍在该护符的此方向一侧相邻）；否 → 该方向无对象，本次不绑定
+        /// （物品按默认逻辑处理，用户重新摆放后再次整理即可生效）。
+        /// </summary>
+        private static void CaptureDirectionBindings(SearchContext ctx, List<Slot> original)
+        {
+            if (original == null)
+            {
+                return;
+            }
+            int storage = Math.Min(ctx.storage, original.Count);
+            for (int cell = 0; cell < storage; cell++)
+            {
+                Slot slot = original[cell];
+                if (slot == null || !slot.hasItem || slot.charm == null ||
+                    !ctx.itemByInstance.TryGetValue(slot.instanceID, out ItemInfo info) || info == null)
+                {
+                    continue;
+                }
+
+                ManualBindDirection dir = DirectionBindingManager.GetDirection(slot.instanceID);
+                if (dir == ManualBindDirection.None)
+                {
+                    continue;
+                }
+
+                int x = cell % ctx.width;
+                int y = cell / ctx.width;
+
+                if (dir == ManualBindDirection.Both)
+                {
+                    // 左右模式：需要左右两侧都紧邻护符才成立（本物品被夹住）。
+                    Slot leftT = At(original, x - 1, y, ctx.width, ctx.storage);
+                    Slot rightT = At(original, x + 1, y, ctx.width, ctx.storage);
+                    if (leftT == null || !leftT.hasItem || leftT.charm == null ||
+                        rightT == null || !rightT.hasItem || rightT.charm == null)
+                    {
+                        Plugin.Log.LogInfo($"方向绑定：instance={slot.instanceID} 设了 ←→（左右夹住），" +
+                            "但整理前并非左右两侧都紧邻护符，本次不绑定（把该神器夹在两件护符中间后再次整理即可）。");
+                        continue;
+                    }
+                    ctx.bothLeftByInstance[slot.instanceID] = leftT.instanceID;
+                    ctx.bothRightByInstance[slot.instanceID] = rightT.instanceID;
+                    continue;
+                }
+
+                Slot target = null;
+                switch (dir)
+                {
+                    case ManualBindDirection.Right: target = At(original, x + 1, y, ctx.width, ctx.storage); break;
+                    case ManualBindDirection.Left: target = At(original, x - 1, y, ctx.width, ctx.storage); break;
+                    case ManualBindDirection.Up: target = At(original, x, y - 1, ctx.width, ctx.storage); break;
+                    case ManualBindDirection.Down: target = At(original, x, y + 1, ctx.width, ctx.storage); break;
+                }
+                if (target == null || !target.hasItem || target.charm == null)
+                {
+                    // 该方向没有护符可绑：不记录（不影响该物品的默认行为）
+                    Plugin.Log.LogInfo($"方向绑定：instance={slot.instanceID} 设了 {DirectionBindingBadge.DirSymbol(dir)}，" +
+                        $"但整理前该方向无护符，本次不绑定（重新摆放后再次整理即可）。");
+                    continue;
+                }
+
+                ctx.directionBindingTargetByInstance[slot.instanceID] = target.instanceID;
+                ctx.directionBindingDirByInstance[slot.instanceID] = dir;
+            }
+        }
+
+        /// <summary>
+        /// 白纸的手动摆放绑定：整理前若白纸左右两侧都紧邻护符（玩家有意把白纸夹在两件神器中间），
+        /// 则记录左右绑定——整理后白纸仍被这两件护符左右夹住不分离（左右夹住约束与方向绑定的 ←→ 一致）。
+        /// 若白纸两侧没有护符（玩家没手动摆放），不记录，白纸继续走默认的"连击补位"逻辑。
+        /// 白纸两侧是石板/白纸时同样不记录（默认逻辑处理）。
+        /// </summary>
+        private static void CaptureWhitePaperBindings(SearchContext ctx, List<Slot> original)
+        {
+            if (original == null)
+            {
+                return;
+            }
+            int storage = Math.Min(ctx.storage, original.Count);
+            for (int cell = 0; cell < storage; cell++)
+            {
+                Slot slot = original[cell];
+                if (slot == null || !slot.hasItem || slot.charm == null ||
+                    !ctx.itemByInstance.TryGetValue(slot.instanceID, out ItemInfo info) || info == null ||
+                    !info.isWhitePaper)
+                {
+                    continue;
+                }
+                // 用户已给这张白纸设了方向绑定（Ctrl+中键）：以用户手动绑定为准，跳过自动左右绑定。
+                if (DirectionBindingManager.GetDirection(slot.instanceID) != ManualBindDirection.None)
+                {
+                    continue;
+                }
+
+                int x = cell % ctx.width;
+                int y = cell / ctx.width;
+                Slot leftT = At(original, x - 1, y, ctx.width, ctx.storage);
+                Slot rightT = At(original, x + 1, y, ctx.width, ctx.storage);
+                if (leftT == null || !leftT.hasItem || leftT.charm == null ||
+                    rightT == null || !rightT.hasItem || rightT.charm == null)
+                {
+                    continue; // 两侧没有护符：白纸走默认连击补位逻辑
+                }
+                // 左右必须是可复制的护符（排除白纸本身与石板；不必同连击——用户手动摆放即意图）
+                ctx.bothLeftByInstance[slot.instanceID] = leftT.instanceID;
+                ctx.bothRightByInstance[slot.instanceID] = rightT.instanceID;
+            }
         }
 
         private static void AddCompassChain(SearchContext ctx, int rootInstanceID,
@@ -1637,6 +1823,134 @@ namespace SephiriaBackpackOrganizer
             return CountBrokenCompassBindings(ctx, slots) == 0;
         }
 
+        /// <summary>统计整理前用户手动摆放形成的沙漏/碎片-魔法书绑定被破坏的数量。</summary>
+        private static int CountBrokenHourglassRayShardBindings(SearchContext ctx, List<Slot> slots)
+        {
+            int total = ctx.hourglassTargetByInstance.Count + ctx.rayShardTargetByInstance.Count;
+            if (slots == null || total == 0)
+            {
+                return 0;
+            }
+            int broken = 0;
+            int found = 0;
+            int storage = Math.Min(ctx.storage, slots.Count);
+            for (int cell = 0; cell < storage; cell++)
+            {
+                Slot slot = slots[cell];
+                if (slot == null || !slot.hasItem)
+                {
+                    continue;
+                }
+                int x = cell % ctx.width;
+                int y = cell / ctx.width;
+
+                if (ctx.hourglassTargetByInstance.TryGetValue(slot.instanceID, out int bookId))
+                {
+                    // 沙漏绑定：右侧必须是那本魔法书
+                    found++;
+                    Slot right = At(slots, x + 1, y, ctx.width, ctx.storage);
+                    if (right == null || !right.hasItem || right.instanceID != bookId)
+                    {
+                        broken++;
+                    }
+                }
+                else if (ctx.rayShardTargetByInstance.TryGetValue(slot.instanceID, out int bookId2))
+                {
+                    // 碎片绑定：左侧必须是那本魔法书
+                    found++;
+                    Slot left = At(slots, x - 1, y, ctx.width, ctx.storage);
+                    if (left == null || !left.hasItem || left.instanceID != bookId2)
+                    {
+                        broken++;
+                    }
+                }
+            }
+            return broken + (total - found);
+        }
+
+        private static bool HourglassRayShardBindingsSatisfied(SearchContext ctx, List<Slot> slots)
+        {
+            return CountBrokenHourglassRayShardBindings(ctx, slots) == 0;
+        }
+
+        /// <summary>
+        /// 统计 Ctrl+中键方向绑定被破坏的数量。绑定语义：物品设方向 d 并绑定了对象 T，
+        /// 则物品必须位于 T 的反方向一侧相邻——即物品所在格沿 d 方向走一格必须是 T。
+        /// 例：d=Right → 物品在 T 左侧，T 在物品右侧格。
+        /// 左右(←→)模式：物品必须同时满足左侧格=左对象 且 右侧格=右对象。
+        /// </summary>
+        private static int CountBrokenDirectionBindings(SearchContext ctx, List<Slot> slots)
+        {
+            int total = ctx.directionBindingTargetByInstance.Count
+                        + ctx.bothLeftByInstance.Count
+                        + ctx.bothRightByInstance.Count;
+            if (slots == null || total == 0)
+            {
+                return 0;
+            }
+            int broken = 0;
+            int found = 0;
+            int storage = Math.Min(ctx.storage, slots.Count);
+            for (int cell = 0; cell < storage; cell++)
+            {
+                Slot slot = slots[cell];
+                if (slot == null || !slot.hasItem)
+                {
+                    continue;
+                }
+                int x = cell % ctx.width;
+                int y = cell / ctx.width;
+
+                if (ctx.bothLeftByInstance.TryGetValue(slot.instanceID, out int leftTarget))
+                {
+                    found++;
+                    Slot leftNeighbor = At(slots, x - 1, y, ctx.width, ctx.storage);
+                    if (leftNeighbor == null || !leftNeighbor.hasItem || leftNeighbor.instanceID != leftTarget)
+                    {
+                        broken++;
+                    }
+                }
+                if (ctx.bothRightByInstance.TryGetValue(slot.instanceID, out int rightTarget))
+                {
+                    found++;
+                    Slot rightNeighbor = At(slots, x + 1, y, ctx.width, ctx.storage);
+                    if (rightNeighbor == null || !rightNeighbor.hasItem || rightNeighbor.instanceID != rightTarget)
+                    {
+                        broken++;
+                    }
+                }
+
+                if (!ctx.directionBindingTargetByInstance.TryGetValue(slot.instanceID, out int targetId))
+                {
+                    continue;
+                }
+                found++;
+                if (!ctx.directionBindingDirByInstance.TryGetValue(slot.instanceID, out ManualBindDirection dir))
+                {
+                    broken++; // 有目标无方向：数据不一致，视为破坏
+                    continue;
+                }
+                Slot neighbor = null;
+                switch (dir)
+                {
+                    case ManualBindDirection.Right: neighbor = At(slots, x + 1, y, ctx.width, ctx.storage); break;
+                    case ManualBindDirection.Left: neighbor = At(slots, x - 1, y, ctx.width, ctx.storage); break;
+                    case ManualBindDirection.Up: neighbor = At(slots, x, y - 1, ctx.width, ctx.storage); break;
+                    case ManualBindDirection.Down: neighbor = At(slots, x, y + 1, ctx.width, ctx.storage); break;
+                }
+                if (neighbor == null || !neighbor.hasItem || neighbor.instanceID != targetId)
+                {
+                    broken++;
+                }
+            }
+            return broken + (total - found);
+        }
+
+        private static bool DirectionBindingsSatisfied(SearchContext ctx, List<Slot> slots)
+        {
+            return CountBrokenDirectionBindings(ctx, slots) == 0;
+        }
+
         private static bool WhitePaperMatchesTarget(SearchContext ctx, List<Slot> slots,
             int paperCell, int targetIndex)
         {
@@ -1781,6 +2095,22 @@ namespace SephiriaBackpackOrganizer
             if (brokenCompassBindings > 0)
             {
                 score -= brokenCompassBindings * 1000000000d;
+            }
+
+            // 用户手动摆放形成的沙漏/碎片绑定同样是硬约束：沙漏必须仍在该魔法书左侧、
+            // 碎片必须仍在该魔法书右侧。破坏绑定施加同样的巨额惩罚，保证默认的
+            // "CD 最长/耗蓝最高"择优不会覆盖用户的明确摆放意图。
+            int brokenManualBindings = CountBrokenHourglassRayShardBindings(ctx, slots);
+            if (brokenManualBindings > 0)
+            {
+                score -= brokenManualBindings * 1000000000d;
+            }
+
+            // Ctrl+中键设置的方向绑定同样是硬约束（与指北针/沙漏/碎片的手动绑定同一套守护）。
+            int brokenDirBindings = CountBrokenDirectionBindings(ctx, slots);
+            if (brokenDirBindings > 0)
+            {
+                score -= brokenDirBindings * 1000000000d;
             }
 
             // 负担惩罚基准：格位最低等级（负担应待在最低/负等级格；无负格时放最低格不罚）
@@ -3902,6 +4232,22 @@ namespace SephiriaBackpackOrganizer
                 bestLayout = CloneSlots(original);
                 globalBest = beforeScore;
             }
+
+            // 沙漏/碎片的手动摆放绑定同样属于硬约束：搜索不应为了默认择优破坏用户摆放意图。
+            if (!HourglassRayShardBindingsSatisfied(ctx, bestLayout))
+            {
+                Plugin.Log.LogWarning("搜索结果破坏了整理前沙漏/碎片的手动绑定，已回退整理前布局。");
+                bestLayout = CloneSlots(original);
+                globalBest = beforeScore;
+            }
+
+            // Ctrl+中键方向绑定：任何布局若破坏了绑定的相邻关系，直接回退整理前布局（保证不分离）。
+            if (!DirectionBindingsSatisfied(ctx, bestLayout))
+            {
+                Plugin.Log.LogWarning("搜索结果破坏了 Ctrl+中键方向绑定，已回退整理前布局。");
+                bestLayout = CloneSlots(original);
+                globalBest = beforeScore;
+            }
             bestScore = globalBest;
 
             return globalBest >= beforeScore - 0.5 ? bestLayout : original;
@@ -4758,7 +5104,8 @@ namespace SephiriaBackpackOrganizer
                 Slot slot = slots[cell];
                 if (slot != null && slot.hasItem &&
                     ctx.itemByInstance.TryGetValue(slot.instanceID, out ItemInfo info) && info != null &&
-                    info.isCompass && !ctx.compassChainInstances.Contains(slot.instanceID))
+                    info.isCompass && !ctx.compassChainInstances.Contains(slot.instanceID) &&
+                    DirectionBindingManager.GetDirection(slot.instanceID) == ManualBindDirection.None)
                 {
                     compasses.Add(cell);
                 }
@@ -4910,7 +5257,9 @@ namespace SephiriaBackpackOrganizer
                 Slot slot = slots[cell];
                 if (slot != null && slot.hasItem &&
                     ctx.itemByInstance.TryGetValue(slot.instanceID, out ItemInfo info) &&
-                    info != null && info.isWhitePaper)
+                    info != null && info.isWhitePaper &&
+                    !ctx.bothLeftByInstance.ContainsKey(slot.instanceID) &&
+                    !ctx.bothRightByInstance.ContainsKey(slot.instanceID))
                 {
                     paperCells.Add(cell);
                 }
@@ -5033,8 +5382,10 @@ namespace SephiriaBackpackOrganizer
                 {
                     continue;
                 }
-                if (item.isHourglass)
+                if (item.isHourglass && !ctx.hourglassTargetByInstance.ContainsKey(slot.instanceID) &&
+                    DirectionBindingManager.GetDirection(slot.instanceID) == ManualBindDirection.None)
                 {
+                    // 只移动未绑定的沙漏；自动绑定或 Ctrl+中键方向绑定的沙漏保持不动（评分强约束守护）。
                     hourglassIdx.Add(cell);
                 }
                 else if (item.isMagicBook)
@@ -5110,8 +5461,10 @@ namespace SephiriaBackpackOrganizer
                 {
                     continue;
                 }
-                if (item.isRayShard)
+                if (item.isRayShard && !ctx.rayShardTargetByInstance.ContainsKey(slot.instanceID) &&
+                    DirectionBindingManager.GetDirection(slot.instanceID) == ManualBindDirection.None)
                 {
+                    // 只移动未绑定的碎片；自动绑定或 Ctrl+中键方向绑定的碎片保持不动（评分强约束守护）。
                     shardIdx.Add(cell);
                 }
                 else if (item.isMagicBook)

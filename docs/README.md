@@ -5,14 +5,18 @@
 🌏 **语言 / Language**：[中文](README.md) · [English](README.en.md) · [한국어](README.ko.md)
 
 ![Downloads](https://img.shields.io/github/downloads/Infinite-Heaven/SephiriaBackpackOrganizer/total?label=Downloads&color=2f6fad)
-![往期下载量合计](https://img.shields.io/badge/%E5%BE%80%E6%9C%9F%E4%B8%8B%E8%BD%BD%E9%87%8F%E5%90%88%E8%AE%A1-1762-2f6fad)
+![往期下载量合计](https://img.shields.io/badge/%E5%BE%80%E6%9C%9F%E4%B8%8B%E8%BD%BD%E9%87%8F%E5%90%88%E8%AE%A1-2252-2f6fad)
 
 《赛菲莉娅》(Sephiria, Steam AppID 2436940) 的 BepInEx 插件。按 **F8** 一键整理背包，把石板覆盖、护符位置条件、行星聚簇、和谐之晶、奉献徽章、凯尔萨德尼钥匙周期行、指北针原目标绑定、白纸连击补位、发光的沙漏等所有加成机制尽可能同时吃到。
 
-- 版本：v2.5.2
-- **重写了手动优先级的排序方式**：中键逐次点击循环 P1→P2→P3→P4，每件物品独立设置，再点一次取消恢复默认
+- 版本：v2.5.3
+- 新增了对 mac 设备的支持
+- 新增了自定义物品绑定功能，按住 ctrl 时点击中键，可使物品拥有绑定功能（手动放在对应位置的神器将不会在自动整理中改变）
+- 白纸，沙漏，雷伊星，这三件神器将会在玩家手动放置期望加成的神器到对应位置时进行绑定
+- 提升克里顿印章的优先级到 P2(金字)
 - 优化了运行时卡顿造成网络波动的问题
 - 运行环境：BepInEx 6（Unity Mono）/ Unity 6000.3.21f1 / Mirror 联机
+- 支持平台：Windows / macOS
 - 单机、主机、联机客户端均可用
 
 ## 截图
@@ -59,7 +63,7 @@
 
 ### 方式一：完整包（推荐，最简单）
 
-1. 打开本页右上角 **Releases**，下载最新版完整包（文件名类似 `SephiriaBackpackOrganizer-v2.5.2.zip`）
+1. 打开本页右上角 **Releases**，下载最新版完整包（文件名类似 `SephiriaBackpackOrganizer-v2.5.3.zip`）
 2. 解压压缩包，会得到 `BepInEx` 文件夹、`winhttp.dll` 等文件
 3. 全部复制到游戏安装目录：Steam 库中右键《赛菲莉娅》→ 管理 → 浏览本地文件，把解压出的所有文件覆盖粘贴进去
 4. 从 Steam 正常启动游戏，进入游戏后按 **F8** 即可整理背包

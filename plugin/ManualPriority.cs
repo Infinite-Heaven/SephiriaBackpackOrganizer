@@ -176,7 +176,7 @@ namespace SephiriaBackpackOrganizer
             }
 
             Plugin plugin = Plugin.Instance;
-            if (plugin == null || !plugin.ManualPriorityEnabled.Value)
+            if (plugin == null)
             {
                 return true;
             }
@@ -191,16 +191,50 @@ namespace SephiriaBackpackOrganizer
 
             if (plugin.IsSorting)
             {
-                Plugin.Log.LogInfo("整理进行中，已忽略本次中键提权操作。");
+                Plugin.Log.LogInfo("整理进行中，已忽略本次中键操作。");
                 return false;
             }
 
+            // Ctrl + 中键 → 方向绑定（DirectionBindingManager）；裸中键 → 手动优先级。
+            // 事件在松开中键时触发，用此刻键盘状态判定组合键；两者互斥，各吃各的事件。
+            if (UnityEngine.InputSystem.Keyboard.current != null &&
+                UnityEngine.InputSystem.Keyboard.current.ctrlKey.isPressed)
+            {
+                if (plugin.DirectionBindingEnabled.Value)
+                {
+                    ManualBindDirection dir = DirectionBindingManager.Toggle(item.InstanceID);
+                    int shown = DirectionBindingManager.RefreshVisibleBadges();
+                    Plugin.Log.LogInfo(dir != ManualBindDirection.None
+                        ? $"方向绑定：instance={item.InstanceID} → {DirectionBindingBadge.DirSymbol(dir)}（绑定{DirName(dir)}；已设 {DirectionBindingManager.Count} 件，标记 {shown} 个）"
+                        : $"方向绑定：instance={item.InstanceID} → 已取消（恢复默认；剩余 {DirectionBindingManager.Count} 件，标记 {shown} 个）");
+                }
+                return false;
+            }
+
+            if (!plugin.ManualPriorityEnabled.Value)
+            {
+                return true;
+            }
+
             int rank = ManualPriorityManager.Toggle(item.InstanceID);
-            int shown = ManualPriorityManager.RefreshVisibleBadges();
+            int shownP = ManualPriorityManager.RefreshVisibleBadges();
             Plugin.Log.LogInfo(rank > 0
-                ? $"手动优先级：instance={item.InstanceID} → P{rank}（已设置 {ManualPriorityManager.Count} 件，界面标记 {shown} 个）"
-                : $"手动优先级：instance={item.InstanceID} → 已取消（恢复默认优先级；剩余 {ManualPriorityManager.Count} 件，界面标记 {shown} 个）");
+                ? $"手动优先级：instance={item.InstanceID} → P{rank}（已设置 {ManualPriorityManager.Count} 件，界面标记 {shownP} 个）"
+                : $"手动优先级：instance={item.InstanceID} → 已取消（恢复默认优先级；剩余 {ManualPriorityManager.Count} 件，界面标记 {shownP} 个）");
             return false;
+        }
+
+        private static string DirName(ManualBindDirection dir)
+        {
+            switch (dir)
+            {
+                case ManualBindDirection.Right: return "右侧物品";
+                case ManualBindDirection.Left: return "左侧物品";
+                case ManualBindDirection.Up: return "上方物品";
+                case ManualBindDirection.Down: return "下方物品";
+                case ManualBindDirection.Both: return "左右两侧物品";
+                default: return "";
+            }
         }
     }
 
@@ -210,6 +244,7 @@ namespace SephiriaBackpackOrganizer
         private static void Postfix(UI_NewInventoryIcon __instance)
         {
             ManualPriorityBadge.GetOrCreate(__instance).Refresh();
+            DirectionBindingBadge.GetOrCreate(__instance).Refresh();
         }
     }
 
@@ -219,6 +254,7 @@ namespace SephiriaBackpackOrganizer
         private static void Postfix(UI_NewInventoryIcon __instance)
         {
             ManualPriorityBadge.GetOrCreate(__instance).Refresh();
+            DirectionBindingBadge.GetOrCreate(__instance).Refresh();
         }
     }
 
@@ -228,6 +264,7 @@ namespace SephiriaBackpackOrganizer
         private static void Postfix(UI_NewInventoryIcon __instance)
         {
             ManualPriorityBadge.GetOrCreate(__instance).Refresh();
+            DirectionBindingBadge.GetOrCreate(__instance).Refresh();
         }
     }
 }

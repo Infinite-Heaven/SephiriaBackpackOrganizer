@@ -5,13 +5,17 @@
 🌏 **Language / 语言**：[English](README.en.md) · [中文](README.md) · [한국어](README.ko.md)
 
 ![Downloads](https://img.shields.io/github/downloads/Infinite-Heaven/SephiriaBackpackOrganizer/total?label=Downloads&color=2f6fad)
-![往期下载量合计](https://img.shields.io/badge/%E5%BE%80%E6%9C%9F%E4%B8%8B%E8%BD%BD%E9%87%8F%E5%90%88%E8%AE%A1-1762-2f6fad)
+![往期下载量合计](https://img.shields.io/badge/%E5%BE%80%E6%9C%9F%E4%B8%8B%E8%BD%BD%E9%87%8F%E5%90%88%E8%AE%A1-2252-2f6fad)
 
 A BepInEx plugin for *Sephiria* (Steam AppID 2436940). Press **F8** to auto-arrange your inventory so all the synergy mechanics trigger at once: tablet coverage, charm position conditions, planet clusters, harmony crystals, dedication badges, the Kelsardanni Key cycle rows, compass original-target binding, white-paper combo filling and the glowing hourglass.
 
-- Version: v2.5.2
-- **Manual priority logic rewritten**: middle-click cycles P1 → P2 → P3 → P4 per artifact independently; clicking once more clears it back to the default priority
+- Version: v2.5.3
+- Added macOS support
+- Added custom artifact binding: hold Ctrl and middle-click an artifact to give it a binding (artifacts you manually placed next to the bound position will not be changed by auto-sort)
+- White paper, hourglass and Ray's Star Fragment now bind automatically when you manually place the artifact you want boosted in the matching position
+- Kriton's Seal priority raised to P2 (gold tier)
 - Runtime: BepInEx 6 (Unity Mono) / Unity 6000.3.21f1 / Mirror multiplayer
+- Platforms: Windows / macOS
 - Works for solo, host and multiplayer clients
 
 ## Screenshots
@@ -58,7 +62,7 @@ Press **F8** to arrange your bag: before on the left, after on the right (instal
 
 ### Option 1: Full package (recommended, easiest)
 
-1. Open **Releases** (top right of this page) and download the latest full package (file name like `SephiriaBackpackOrganizer-v2.5.2.zip`)
+1. Open **Releases** (top right of this page) and download the latest full package (file name like `SephiriaBackpackOrganizer-v2.5.3.zip`)
 2. Unzip it — you will get a `BepInEx` folder, `winhttp.dll` and other files
 3. Copy everything into your game folder: in Steam, right-click *Sephiria* → Manage → Browse local files, and paste over it
 4. Launch the game from Steam, then press **F8** in-game to sort your bag

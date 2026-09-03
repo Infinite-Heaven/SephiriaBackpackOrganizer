@@ -55,6 +55,8 @@ namespace SephiriaBackpackOrganizer
 
         internal ConfigEntry<bool> ManualPriorityEnabled;
         internal ConfigEntry<bool> ShowManualPriorityBadge;
+        internal ConfigEntry<bool> DirectionBindingEnabled;
+        internal ConfigEntry<bool> ShowDirectionBindingBadge;
 
         internal ConfigEntry<bool> EnableSmartStart;
         internal ConfigEntry<bool> EnableRandomStarts;
@@ -192,6 +194,14 @@ namespace SephiriaBackpackOrganizer
             ShowManualPriorityBadge = Config.Bind("ManualPriority", "ShowBadge", true,
                 "在已设置手动优先级的神器左下角显示透明小字 P1~P4 标记");
 
+            DirectionBindingEnabled = Config.Bind("ManualPriority", "DirectionBindingEnabled", true,
+                "按住 Ctrl + 鼠标中键点击背包神器设置方向绑定（每件独立循环：无→右→→左←→上↑→下↓→左右←→→无）。" +
+                "绑定的神器整理后与绑定对象保持相邻不分离（类似沙漏/碎片/指北针的绑定，可对任意神器使用）；" +
+                "左右模式 = 本物品整理前左右两侧都紧邻护符时，整理后仍被左右两件夹住不分离");
+
+            ShowDirectionBindingBadge = Config.Bind("ManualPriority", "ShowDirectionBadge", true,
+                "在已设置方向绑定的神器右下角显示方向箭头 → ← ↑ ↓ ←→");
+
             VerboseDiagnostics = Config.Bind("Debug", "VerboseDiagnostics", false,
                 "输出完整物品识别、布局网格和特殊机制分析。关闭可减少每次整理后的额外评分与日志开销");
 
@@ -237,9 +247,9 @@ namespace SephiriaBackpackOrganizer
                 "默认：冰冷的锁、丢弃的金戒指、绝对戒指、红茶叶袋、冰星（效果重要，即使稀有度不高）");
 
             ForcedPriorityItems = Config.Bind("Priority", "ForcedPriorityItems",
-                "Item_ScytheOfBerut_Name:3,Item_IceHammer_Name:2,Item_FaultfinderNeedle_Name:4",
+                "Item_ScytheOfBerut_Name:3,Item_IceHammer_Name:2,Item_FaultfinderNeedle_Name:4,Item_IncreaseGoldDropRate_Name:2",
                 "强制指定优先级的藏品（格式 key:优先级，逗号分隔多个；1最高~4最低，覆盖稀有度映射与强制1级配置）。" +
-                "默认：贝鲁特之镰降为3级（其效果依赖暴击溢出，权重不高）；暴风雪之锤升为2级；故障探测针降为4级（普通）");
+                "默认：贝鲁特之镰降为3级（其效果依赖暴击溢出，权重不高）；暴风雪之锤升为2级；故障探测针降为4级（普通）；克里顿的印章（金币掉落率）设为2级");
 
             IgnoreCellPreferredItems = Config.Bind("Priority", "IgnoreCellPreferredItems",
                 "Item_ColdLock_Name",
@@ -410,6 +420,7 @@ namespace SephiriaBackpackOrganizer
                 {
                     sorter.ResetSessionClock(); // 退出会话：重置背包初始化计时
                     ManualPriorityManager.Clear();
+                    DirectionBindingManager.Clear();
                 }
                 Log.LogInfo($"会话状态变化: NetworkClient.active={NetworkClient.active}, " +
                             $"localPlayer={(NetworkClient.localPlayer != null ? "有" : "无")}");
@@ -522,6 +533,7 @@ namespace SephiriaBackpackOrganizer
             harmony?.UnpatchSelf();
             harmony = null;
             ManualPriorityManager.Clear();
+            DirectionBindingManager.Clear();
             Instance = null;
         }
 
@@ -532,6 +544,6 @@ namespace SephiriaBackpackOrganizer
     {
         public const string PLUGIN_GUID = "com.sephiria.backpack-organizer";
         public const string PLUGIN_NAME = "Sephiria Backpack Organizer";
-        public const string PLUGIN_VERSION = "2.5.2";
+        public const string PLUGIN_VERSION = "2.5.3";
     }
 }

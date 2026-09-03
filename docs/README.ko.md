@@ -5,13 +5,17 @@
 🌏 **언어 / Language**：[한국어](README.ko.md) · [English](README.en.md) · [中文](README.md)
 
 ![Downloads](https://img.shields.io/github/downloads/Infinite-Heaven/SephiriaBackpackOrganizer/total?label=Downloads&color=2f6fad)
-![往期下载量合计](https://img.shields.io/badge/%E5%BE%80%E6%9C%9F%E4%B8%8B%E8%BD%BD%E9%87%8F%E5%90%88%E8%AE%A1-1762-2f6fad)
+![往期下载量合计](https://img.shields.io/badge/%E5%BE%80%E6%9C%9F%E4%B8%8B%E8%BD%BD%E9%87%8F%E5%90%88%E8%AE%A1-2252-2f6fad)
 
 *Sephiria*(Steam AppID 2436940)용 BepInEx 플러그인입니다. **F8**을 누르면 가방을 자동으로 정리해 석판 커버리지, 부적 위치 조건, 행성 클러스터, 하모니 크리스탈, 헌신 배지, 켈사르단니 열쇠 순환 행, 나침반 원래 대상 고정, 백지 콤보 채우기, 빛나는 모래시계 등 모든 시너지 메커니즘을 한 번에 발동시킵니다.
 
-- 버전: v2.5.2
-- **수동 우선순위 정렬 방식 재작성**: 가운데 클릭으로 P1 → P2 → P3 → P4 순환, 아이템마다 독립 설정, 한 번 더 누르면 취소되어 기본 우선순위로 복귀
+- 버전: v2.5.3
+- macOS 지원 추가
+- 커스텀 아이템 바인딩 추가: Ctrl을 누른 채 가운데 클릭하면 아이템에 바인딩을 부여합니다 (수동으로 배치한 위치의 신기는 자동 정리에서 변경되지 않습니다)
+- 백지, 모래시계, 레이의 별 조각은 기대 보너스 신기를 해당 위치에 수동 배치하면 자동으로 바인딩됩니다
+- 크리톤의 인장 우선순위를 P2(금색)로 상향
 - 런타임: BepInEx 6 (Unity Mono) / Unity 6000.3.21f1 / Mirror 멀티플레이
+- 지원 플랫폼: Windows / macOS
 - 솔로, 호스트, 멀티플레이 클라이언트 모두 사용 가능
 
 ## 스크린샷
@@ -58,7 +62,7 @@
 
 ### 방법 1: 전체 패키지 (권장, 가장 간단)
 
-1. 이 페이지 오른쪽 위 **Releases**에서 최신 전체 패키지를 다운로드합니다 (파일명 예: `SephiriaBackpackOrganizer-v2.5.2.zip`)
+1. 이 페이지 오른쪽 위 **Releases**에서 최신 전체 패키지를 다운로드합니다 (파일명 예: `SephiriaBackpackOrganizer-v2.5.3.zip`)
 2. 압축을 풀면 `BepInEx` 폴더, `winhttp.dll` 등이 나옵니다
 3. 모든 파일을 게임 폴더에 복사합니다: Steam에서 *Sephiria* 우클릭 → 관리 → 로컬 파일 보기, 압축을 푼 모든 파일을 덮어쓰기 붙여넣기
 4. Steam에서 게임을 실행한 후 게임 내에서 **F8**을 눌러 가방을 정리합니다
