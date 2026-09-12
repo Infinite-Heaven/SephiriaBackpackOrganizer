@@ -81,6 +81,7 @@ namespace SephiriaBackpackOrganizer
         internal ConfigEntry<string> PriorityLowValueItems;
         internal ConfigEntry<float> LowValueLevelFactor;
         internal ConfigEntry<string> PriorityMinLevelItems;
+        internal ConfigEntry<float> NoEffectLevelFactor;
 
         internal ConfigEntry<float> PlanetBonus;
         internal ConfigEntry<string> PlanetClusterExcludedItems;
@@ -285,6 +286,13 @@ namespace SephiriaBackpackOrganizer
                 "必须优先达到指定最低等级的藏品（格式 key=等级，逗号分隔多个）。" +
                 "命中后强制最高优先级(1级)，启用时有效等级低于目标每级额外扣分，保证优先拉满该等级。" +
                 "默认：谱子「银河」=2（Level2 效果关键）");
+
+            NoEffectLevelFactor = Config.Bind("Priority", "NoEffectLevelFactor", 0.25f,
+                new ConfigDescription(
+                    "“效果未启用”的藏品（武器专属神器当前武器不匹配、位置条件未满足等）保留的等级分比例。" +
+                    ">0 时用户设置的优先级对它同样生效：高优先级藏品仍优先占据高等级格（换武器/满足条件后即可受益），" +
+                    "不会被无条件塞进最差或负等级格。0 = 旧行为（未启用一律视为无价值）。",
+                    new AcceptableValueRange<float>(0f, 1f)));
 
             PlanetBonus = Config.Bind("Synergy", "PlanetBonus", 40000f,
                 new ConfigDescription("行星望远镜(Charm_PlanetModule)启用时，周围八格每颗启用行星藏品的加成奖励（0=关闭）。" +
@@ -544,6 +552,6 @@ namespace SephiriaBackpackOrganizer
     {
         public const string PLUGIN_GUID = "com.sephiria.backpack-organizer";
         public const string PLUGIN_NAME = "Sephiria Backpack Organizer";
-        public const string PLUGIN_VERSION = "2.5.3";
+        public const string PLUGIN_VERSION = "2.5.4";
     }
 }

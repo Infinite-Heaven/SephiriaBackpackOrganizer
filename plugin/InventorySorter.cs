@@ -550,7 +550,7 @@ namespace SephiriaBackpackOrganizer
                                 foreach (string key in plugin.PriorityFixedItems.Value.Split(new[] { ',', ';' },
                                              StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    if (info.entity.aName.key.Trim() == key.Trim())
+                                    if (MatchesItemKey(info, key))
                                     {
                                         info.priority = 1;
                                         break;
@@ -582,12 +582,14 @@ namespace SephiriaBackpackOrganizer
                                     }
                                 }
                                 // 强制指定优先级（格式 key:数字，覆盖稀有度映射与强制1级；最后匹配生效）
+                                // 匹配同时支持 LocalizedString key 与护符类名（大小写不敏感），
+                                // 与 LowValueItems/MinLevelItems 的匹配方式保持一致，避免填类名时静默不生效。
                                 foreach (string pair in plugin.ForcedPriorityItems.Value.Split(new[] { ',', ';' },
                                              StringSplitOptions.RemoveEmptyEntries))
                                 {
                                     string[] kv = pair.Split(':');
-                                    if (kv.Length == 2 && info.entity.aName.key.Trim() == kv[0].Trim() &&
-                                        int.TryParse(kv[1], out int fp) && fp >= 1 && fp <= 4)
+                                    if (kv.Length == 2 && MatchesItemKey(info, kv[0]) &&
+                                        int.TryParse(kv[1].Trim(), out int fp) && fp >= 1 && fp <= 4)
                                     {
                                         info.priority = fp;
                                         break;
@@ -597,7 +599,7 @@ namespace SephiriaBackpackOrganizer
                                 foreach (string key in plugin.IgnoreCellPreferredItems.Value.Split(new[] { ',', ';' },
                                              StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    if (info.entity.aName.key.Trim() == key.Trim())
+                                    if (MatchesItemKey(info, key))
                                     {
                                         info.preferIgnoreCells = true;
                                         break;
@@ -607,7 +609,7 @@ namespace SephiriaBackpackOrganizer
                                 foreach (string key in plugin.RowLockedItems.Value.Split(new[] { ',', ';' },
                                              StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    if (info.entity.aName.key.Trim() == key.Trim())
+                                    if (MatchesItemKey(info, key))
                                     {
                                         info.isRowLocked = true;
                                         info.lockRow = i / w; // 记录用户摆放时的行（i 为原始格子索引）
@@ -618,7 +620,7 @@ namespace SephiriaBackpackOrganizer
                                 foreach (string key in plugin.HarmonyCrystalItems.Value.Split(new[] { ',', ';' },
                                              StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    if (info.entity.aName.key.Trim() == key.Trim())
+                                    if (MatchesItemKey(info, key))
                                     {
                                         info.isHarmonyCrystal = true;
                                         break;
@@ -628,7 +630,7 @@ namespace SephiriaBackpackOrganizer
                                 foreach (string key in plugin.DedicationBadgeItems.Value.Split(new[] { ',', ';' },
                                              StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    if (info.entity.aName.key.Trim() == key.Trim())
+                                    if (MatchesItemKey(info, key))
                                     {
                                         info.isDedicationBadge = true;
                                         break;
@@ -638,7 +640,7 @@ namespace SephiriaBackpackOrganizer
                                 foreach (string key in plugin.HourglassItems.Value.Split(new[] { ',', ';' },
                                              StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    if (info.entity.aName.key.Trim() == key.Trim())
+                                    if (MatchesItemKey(info, key))
                                     {
                                         info.isHourglass = true;
                                         break;
@@ -658,7 +660,7 @@ namespace SephiriaBackpackOrganizer
                                 foreach (string key in plugin.EclipseItems.Value.Split(new[] { ',', ';' },
                                              StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    if (info.entity.aName.key.Trim() == key.Trim())
+                                    if (MatchesItemKey(info, key))
                                     {
                                         info.isEternalEclipse = true;
                                         break;
@@ -2242,11 +2244,16 @@ namespace SephiriaBackpackOrganizer
                     }
                 }
 
+                // 有效等级与优先级权重在启用/未启用两条路径上都要用：
+                // 未启用（武器不匹配、位置条件未满足、负格等）不代表物品没有位置价值——
+                // 用户设置的优先级必须对它同样生效，否则"武器专属神器提高优先级"会完全无效。
+                int eff = Mathf.Clamp(lvl, 0, info.maxLevel);
+                double priorityWeight = PriorityWeight(info.priority) * info.levelScoreFactor;
+
                 if (enabled)
                 {
-                    int eff = Mathf.Clamp(lvl, 0, info.maxLevel);
                     // 指北针：效果只在配对时生效，未配对时等级分大幅打折
-                    double levelScore = eff * 10000 * PriorityWeight(info.priority) * info.levelScoreFactor;
+                    double levelScore = eff * 10000 * priorityWeight;
                     if (info.isCompass && compassPaired != null && !compassPaired[cell])
                     {
                         levelScore *= plugin.CompassUnpairedFactor.Value;
@@ -2265,6 +2272,16 @@ namespace SephiriaBackpackOrganizer
                 else
                 {
                     score -= 750;
+                    // 未启用物品保留一部分位置价值（比例由 NoEffectLevelFactor 控制，默认 0.25）：
+                    // 让优先级对它生效——高优先级藏品仍优先占高等级格，避免被自动整理塞进最差/负等级格。
+                    // 折扣系数远小于启用时的完整价值，因此不会抢走本该给"已启用藏品"的好格子，
+                    // 也不会让搜索放弃去满足启用条件（满足后价值 = 完整等级分 + 1000）。
+                    // 注意：石板禁用格（disabled）本身无效、格位等级不计，必须排除，
+                    // 否则会给禁用格虚假的位置价值、把物品诱导进去。
+                    if (!disabled[cell] && plugin.NoEffectLevelFactor.Value > 0f)
+                    {
+                        score += eff * 10000 * priorityWeight * plugin.NoEffectLevelFactor.Value;
+                    }
                 }
 
                 if (lvl < 0)
@@ -2910,6 +2927,7 @@ namespace SephiriaBackpackOrganizer
             int dedicationBadges = 0, dedicationCompanions = 0;
             int hourglasses = 0, magicBooks = 0, eclipses = 0, scales = 0, rayShards = 0;
             int belts = 0, lowValue = 0, minLevel = 0;
+            var weaponUnmatched = new List<string>();
             int[] rarityCount = new int[5];
             int[] priorityCount = new int[5];
             foreach (ItemInfo it in ctx.items)
@@ -2938,10 +2956,21 @@ namespace SephiriaBackpackOrganizer
                     {
                         weaponRelated++;
                         var wc = it.slot.charm.WeaponController;
-                        if (wc != null && wc.currentWeapon != null &&
-                            wc.currentWeapon.weaponType == it.slot.charm.relatedWeapon)
+                        bool matched = wc != null && wc.currentWeapon != null &&
+                                       wc.currentWeapon.weaponType == it.slot.charm.relatedWeapon;
+                        if (matched)
                         {
                             weaponMatched++;
+                        }
+                        else
+                        {
+                            // 诊断：列出武器不匹配的护符——这类藏品在游戏内"效果未启用"，
+                            // 但仍按优先级保留位置价值（NoEffectLevelFactor），不再是"无法提高优先级"。
+                            string key = it.entity != null && it.entity.aName != null ? it.entity.aName.key : "?";
+                            string cur = wc != null && wc.currentWeapon != null
+                                ? wc.currentWeapon.weaponType.ToString()
+                                : "无武器/读取不到";
+                            weaponUnmatched.Add($"{key}(需{it.slot.charm.relatedWeapon}/现有{cur},P{it.priority})");
                         }
                     }
                 }
@@ -2959,6 +2988,16 @@ namespace SephiriaBackpackOrganizer
                 $" 腰带{belts} 低等级价值{lowValue} 最低等级目标{minLevel}" +
                 $" 优先级[P1:{priorityCount[1]} P2:{priorityCount[2]} P3:{priorityCount[3]} P4:{priorityCount[4]}]" +
                 $" 稀有度[普通{rarityCount[0]} 优秀{rarityCount[1]} 稀有{rarityCount[2]} 传说{rarityCount[3]} 永恒{rarityCount[4]}]");
+
+            // 诊断：武器不匹配（游戏内效果未启用）的武器专属神器清单——
+            // 这些藏品现在会按优先级保留位置价值（NoEffectLevelFactor），不再被无差别塞进最差格。
+            if (weaponUnmatched.Count > 0)
+            {
+                float factor = Plugin.Instance != null ? Plugin.Instance.NoEffectLevelFactor.Value : 0f;
+                Plugin.Log.LogInfo(
+                    $"武器不匹配（效果未启用，按优先级保留 {factor:0.##} 位置价值）：" +
+                    string.Join(" ", weaponUnmatched));
+            }
 
             // 诊断：打印全部护符的 LocalizedString key 与类名（用于往配置里填 key）
             var tagList = new System.Text.StringBuilder();
