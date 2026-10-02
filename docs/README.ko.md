@@ -74,7 +74,7 @@
 ### 방법 2: macOS
 
 위 전체 패키지는 Windows용입니다. macOS 네이티브 버전은
-[macos/README.md](../macos/README.md)를 참고하세요:
+[macos/README.ko.md](../macos/README.ko.md)를 참고하세요:
 
 ```sh
 cd macos && ./install.sh

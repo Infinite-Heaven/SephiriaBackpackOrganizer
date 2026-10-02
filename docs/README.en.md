@@ -74,7 +74,7 @@ Press **F8** to arrange your bag: before on the left, after on the right (instal
 ### Option 2: macOS
 
 The full package above is for Windows. For the native macOS build, see
-[macos/README.md](../macos/README.md):
+[macos/README.en.md](../macos/README.en.md):
 
 ```sh
 cd macos && ./install.sh

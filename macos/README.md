@@ -1,5 +1,7 @@
 # macOS 安装说明
 
+🌏 **语言 / Language / 언어**：[中文](README.md) · [English](README.en.md) · [한국어](README.ko.md)
+
 给 macOS 原生版《赛菲莉娅》装背包整理插件。
 
 插件本体和 BepInEx 都直接用 Releases 里的官方原文件，**一个字节都没改**；
@@ -7,6 +9,8 @@ macOS 这边只是换了一套加载器——Windows 靠 `winhttp.dll` + `doorst
 注入，macOS 得靠 `DYLD_INSERT_LIBRARIES` 加一个 dylib。
 
 已在 macOS 26.5.2 / Apple M2 Max 及 macOS 27.0 / Apple M1 Pro / Sephiria 1.0.33（Unity 6000.3.21f1）+ 插件 v2.5.4 上实测通过。
+
+主 README：[中文](../docs/README.md) · [English](../docs/README.en.md) · [한국어](../docs/README.ko.md)
 
 ## 安装
 
