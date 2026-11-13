@@ -197,7 +197,7 @@ namespace SephiriaBackpackOrganizer
             public float magicCd;            // 魔法书 CD 秒数（ActiveSkillEntity.cooldownTime）
             public bool isRayShard;          // 雷伊星碎片（Item_DoubleMagic_Name：放在耗蓝最高的魔法书右侧）
             public int magicMpCost;          // 魔法书耗蓝量（mpCostsByLevel 最大值）
-            public bool isCompass;          // Charm_UpCharmDamage（指北针）
+            public bool isCompass;          // Charm_Compass（指北针）
             public bool isAttackable;       // IAttackableCharm
             public bool isWhitePaper;       // Charm_WhitePaper（白纸：左右相邻神器共享分类时复制该连击）
             public bool isBelt;             // Charm_WoodenBox 类（多用途腰带/木箱：最上行每件神器效果叠加一次）
@@ -482,7 +482,7 @@ namespace SephiriaBackpackOrganizer
                     }
                     info.isEternalEclipse = s.charm is Charm_FireIceWeapon;
                     info.isOpposingScale = s.charm is Charm_FireIce;
-                    info.isCompass = s.charm is Charm_UpCharmDamage;
+                    info.isCompass = s.charm is Charm_Compass;
                     info.isAttackable = s.charm is IAttackableCharm ac && ac.IsAttackableCharm();
                     info.isWhitePaper = s.charm is Charm_WhitePaper;
                     info.isCyclicRowCategory = s.charm is Charm_3Elemental_ByRow;
@@ -2879,7 +2879,7 @@ namespace SephiriaBackpackOrganizer
                     Slot a = At(slots, x, y - 1, w, ctx.storage);
                     if (a != null && a.hasItem && a.charm != null)
                     {
-                        above = a.charm is Charm_UpCharmDamage ? "指北针" :
+                        above = a.charm is Charm_Compass ? "指北针" :
                                 (a.charm is IAttackableCharm ac && ac.IsAttackableCharm()) ? "伤害类" : "其他";
                         if (ctx.itemByInstance.TryGetValue(a.instanceID, out ItemInfo ai) && ai != null)
                         {
@@ -5177,7 +5177,7 @@ namespace SephiriaBackpackOrganizer
                     if (valid)
                     {
                         // 目标格：空格，或任意非指北针物品（允许交换腾位；评分会拒绝不划算的交换）
-                        if (!(slots[cell] != null && slots[cell].hasItem && slots[cell].charm is Charm_UpCharmDamage))
+                        if (!(slots[cell] != null && slots[cell].hasItem && slots[cell].charm is Charm_Compass))
                         {
                             compassTargets.Add(cell);
                         }
