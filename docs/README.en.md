@@ -9,7 +9,8 @@
 
 A BepInEx plugin for *Sephiria* (Steam AppID 2436940). Press **F8** to auto-arrange your inventory so all the synergy mechanics trigger at once: tablet coverage, charm position conditions, planet clusters, harmony crystals, dedication badges, the Kelsardanni Key cycle rows, compass original-target binding, white-paper combo filling and the glowing hourglass.
 
-- Version: v2.5.4
+- Version: v2.5.5
+- Updated for the new game version (compass charm class renamed to Charm_Compass), fixing the TypeLoadException that occurred when pressing F8
 - Fixed abnormally low sorting priority for weapon-exclusive / special-attack related artifacts
 - **Due to the author's academic commitments, development is paused for now. Pull requests are still very welcome and will be merged from time to time.**
 - Added macOS support
@@ -64,7 +65,7 @@ Press **F8** to arrange your bag: before on the left, after on the right (instal
 
 ### Option 1: Full package (recommended, easiest)
 
-1. Open **Releases** (top right of this page) and download the latest full package (file name like `SephiriaBackpackOrganizer-v2.5.4.zip`)
+1. Open **Releases** (top right of this page) and download the latest full package (file name like `SephiriaBackpackOrganizer-v2.5.5.zip`)
 2. Unzip it — you will get a `BepInEx` folder, `winhttp.dll` and other files
 3. Copy everything into your game folder: in Steam, right-click *Sephiria* → Manage → Browse local files, and paste over it
 4. Launch the game from Steam, then press **F8** in-game to sort your bag
