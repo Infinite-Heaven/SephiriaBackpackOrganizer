@@ -268,7 +268,7 @@ namespace SephiriaBackpackOrganizer
                 new ConfigDescription("4级藏品等级分权重", new AcceptableValueRange<float>(0.5f, 3f)));
 
             CompassTargetForcedHigh = Config.Bind("Priority", "CompassTargetForcedHigh", true,
-                "被北向的金色针（指北针 Charm_UpCharmDamage）锁定的目标神器强制最高优先级(1级)：" +
+                "被北向的金色针（指北针 Charm_Compass）锁定的目标神器强制最高优先级(1级)：" +
                 "无论稀有度，优先拉满等级。整理前已经配对的针才生效");
 
             PriorityLowValueItems = Config.Bind("Priority", "LowLevelValueItems",
@@ -359,7 +359,7 @@ namespace SephiriaBackpackOrganizer
                     new AcceptableValueRange<float>(0f, 100000f)));
 
             CompassBonus = Config.Bind("Synergy", "CompassBonus", 12000f,
-                new ConfigDescription("指北针(Charm_UpCharmDamage)维持整理前原目标时的评分奖励（0=不额外加分，原目标绑定仍始终生效）。" +
+                new ConfigDescription("指北针(Charm_Compass)维持整理前原目标时的评分奖励（0=不额外加分，原目标绑定仍始终生效）。" +
                     "整理前已配对的针会锁定同一个物品实例并随它移动；只有原先未配对的针才自动寻找伤害类藏品/指北针",
                     new AcceptableValueRange<float>(0f, 50000f)));
 
@@ -552,6 +552,6 @@ namespace SephiriaBackpackOrganizer
     {
         public const string PLUGIN_GUID = "com.sephiria.backpack-organizer";
         public const string PLUGIN_NAME = "Sephiria Backpack Organizer";
-        public const string PLUGIN_VERSION = "2.5.4";
+        public const string PLUGIN_VERSION = "2.5.5";
     }
 }
