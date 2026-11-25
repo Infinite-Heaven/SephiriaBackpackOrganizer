@@ -91,14 +91,26 @@ Delete `游戏目录/BepInEx/plugins/SephiriaBackpackOrganizer.dll`; to remove t
 ## Usage
 
 - Press **F8** in game to sort your bag; a "done" toast appears when finished
+- Controller default: **LT + RT**, configurable through `General.GamepadHotkey`, in either order or simultaneously. Holding the chord does not repeat; release and press any bound button again for another sort
 - Middle-click an artifact in the bag to set manual priority: 1 click = P1, 2 = P2, 3 = P3, 4 = P4, one more click clears it; each artifact cycles independently
 - All settings live in `游戏目录/BepInEx/config/com.sephiria.backpack-organizer.cfg` — restart the game after editing
+
+Example controller binding in the configuration file's `[General]` section:
+
+```ini
+[General]
+Hotkey = F8
+GamepadHotkey = LeftTrigger + RightTrigger
+```
+
+Join button names with `+` (case-insensitive). Available names: `LeftTrigger` / `RightTrigger`, `LeftShoulder` / `RightShoulder`, `DpadUp` / `DpadDown` / `DpadLeft` / `DpadRight`, `North` / `South` / `East` / `West`, `LeftStick` / `RightStick`, `Start` / `Select`. Leave empty or set `None` to disable controller sorting. Invalid or duplicate buttons log a warning and disable only the controller shortcut; F8 remains available.
 
 ## Configuration
 
 | Section | Key | Default | Description |
 | --- | --- | --- | --- |
 | General | Hotkey | F8 | Hotkey that triggers sorting |
+| General | GamepadHotkey | LeftTrigger + RightTrigger | Controller chord; empty or None disables it |
 | General | SortMode | Enhanced | Vanilla (built-in) / Enhanced |
 | General | SessionStableDelay | 3 s | Wait after entering a session until the bag is ready (prevents item loss) |
 | Enhanced | SearchRounds | 4 | Independent search rounds per sort |
