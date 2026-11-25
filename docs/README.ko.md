@@ -91,15 +91,26 @@ macOS에서는 단축키가 **fn + F8**입니다 (F8 단독은 시스템 미디�
 ## 사용법
 
 - 게임 내에서 **F8**을 눌러 가방을 정리하면 완료 토스트가 표시됩니다
-- 컨트롤러: **LT + RT**로 정리합니다. 순서에 관계없이 또는 동시에 눌러도 되며, 계속 누르고 있어도 반복되지 않습니다. 한쪽 트리거를 놓았다가 다시 누르면 다시 정리합니다
+- 컨트롤러 기본값은 **LT + RT**이며 `General.GamepadHotkey`에서 변경할 수 있습니다. 순서에 관계없이 누를 수 있고, 계속 누르고 있어도 반복되지 않습니다. 한쪽 버튼을 놓았다가 다시 누르면 다시 정리합니다
 - 가방 아이템을 마우스 가운데 버튼으로 눌러 수동 우선순위를 설정합니다: 1회 P1, 2회 P2, 3회 P3, 4회 P4, 한 번 더 누르면 취소. 각 아이템은 독립적으로 순환합니다
 - 모든 설정은 `게임 폴더/BepInEx/config/com.sephiria.backpack-organizer.cfg`에 있으며, 편집 후 게임을 재시작하세요
+
+설정 파일의 `[General]` 섹션에서 컨트롤러 단축키를 설정합니다:
+
+```ini
+[General]
+Hotkey = F8
+GamepadHotkey = LeftTrigger + RightTrigger
+```
+
+버튼 이름을 `+`로 연결하며 대소문자를 구분하지 않습니다. 사용 가능: `LeftTrigger` / `RightTrigger`, `LeftShoulder` / `RightShoulder`, `DpadUp` / `DpadDown` / `DpadLeft` / `DpadRight`, `North` / `South` / `East` / `West`, `LeftStick` / `RightStick`, `Start` / `Select`. 비워 두거나 `None`으로 설정하면 컨트롤러 정리를 끕니다. 잘못되거나 중복된 버튼은 경고를 기록하고 컨트롤러 단축키만 비활성화하며 F8은 유지합니다.
 
 ## 설정
 
 | 섹션 | 키 | 기본값 | 설명 |
 | --- | --- | --- | --- |
 | General | Hotkey | F8 | 정리를 실행하는 단축키 |
+| General | GamepadHotkey | LeftTrigger + RightTrigger | 컨트롤러 조합키. 비우거나 None이면 비활성화 |
 | General | SortMode | Enhanced | Vanilla(내장) / Enhanced |
 | General | SessionStableDelay | 3초 | 세션 진입 후 가방이 준비될 때까지 대기 (아이템 손실 방지) |
 | Enhanced | SearchRounds | 4 | 정리당 독립 검색 라운드 수 |

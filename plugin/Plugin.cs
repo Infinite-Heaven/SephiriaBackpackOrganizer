@@ -10,6 +10,7 @@ using BepInEx.Unity.Mono.Configuration;
 using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 namespace SephiriaBackpackOrganizer
 {
@@ -31,6 +32,7 @@ namespace SephiriaBackpackOrganizer
         internal static ManualLogSource Log;
 
         internal ConfigEntry<KeyboardShortcut> Hotkey;
+        internal ConfigEntry<string> GamepadHotkey;
         internal ConfigEntry<SortMode> Mode;
         internal ConfigEntry<bool> ShowNotifications;
         internal ConfigEntry<bool> AutoSortOnSessionStart;
@@ -110,6 +112,7 @@ namespace SephiriaBackpackOrganizer
 
         private InventorySorter sorter;
         private Harmony harmony;
+        private GamepadButton[] gamepadButtons = Array.Empty<GamepadButton>();
         private bool autoSortedThisSession;
         private bool lastSessionActive;
 
@@ -121,6 +124,14 @@ namespace SephiriaBackpackOrganizer
             Hotkey = Config.Bind("General", "Hotkey",
                 new KeyboardShortcut(KeyCode.F8),
                 "触发背包整理的快捷键（游戏使用新输入系统，插件会同时兼容新旧输入）");
+
+            GamepadHotkey = Config.Bind("General", "GamepadHotkey", "LeftTrigger + RightTrigger",
+                "手柄整理快捷键，用 + 连接按键名，默认 LT + RT；留空或填 None 可禁用。" +
+                "可用：LeftTrigger、RightTrigger、LeftShoulder、RightShoulder、DpadUp、DpadDown、DpadLeft、DpadRight、" +
+                "North、South、East、West、LeftStick、RightStick、Start、Select。" +
+                "全部按住且任一按键刚按下时触发，长按不连发；无效配置只禁用手柄快捷键，不影响键盘。");
+            GamepadHotkey.SettingChanged += UpdateGamepadShortcut;
+            UpdateGamepadShortcut(this, EventArgs.Empty);
 
             Mode = Config.Bind("General", "SortMode", SortMode.Enhanced,
                 new ConfigDescription(
@@ -401,7 +412,7 @@ namespace SephiriaBackpackOrganizer
             harmony = new Harmony(PluginInfo.PLUGIN_GUID);
             harmony.PatchAll(typeof(Plugin).Assembly);
             Log.LogInfo($"{PluginInfo.PLUGIN_NAME} v{PluginInfo.PLUGIN_VERSION} 已加载。" +
-                        $"按 [{Hotkey.Value}] 或手柄 [LT + RT] 整理背包（当前模式: {Mode.Value}）");
+                        $"按 [{Hotkey.Value}] 或手柄 [{GamepadHotkey.Value}] 整理背包（当前模式: {Mode.Value}）");
         }
 
         /// <summary>每帧轮询逻辑（热键检测/会话诊断/自动整理）。两个 BepInEx 版本均由 MonoBehaviour Update 消息调用。</summary>
@@ -434,7 +445,7 @@ namespace SephiriaBackpackOrganizer
                             $"localPlayer={(NetworkClient.localPlayer != null ? "有" : "无")}");
             }
 
-            if (IsHotkeyDown(Hotkey.Value) || GamepadShortcut.IsPressed())
+            if (IsHotkeyDown(Hotkey.Value) || GamepadShortcut.IsPressed(gamepadButtons))
             {
                 sorter.Sort();
                 return;
@@ -466,6 +477,19 @@ namespace SephiriaBackpackOrganizer
         private void Update()
         {
             Tick();
+        }
+
+        private void UpdateGamepadShortcut(object sender, EventArgs args)
+        {
+            try
+            {
+                gamepadButtons = GamepadShortcut.Parse(GamepadHotkey.Value);
+            }
+            catch (FormatException ex)
+            {
+                gamepadButtons = Array.Empty<GamepadButton>();
+                Log.LogWarning($"General.GamepadHotkey 无效，已禁用手柄整理，键盘快捷键仍可用：{ex.Message}");
+            }
         }
 
         /// <summary>
@@ -538,6 +562,10 @@ namespace SephiriaBackpackOrganizer
 
         private void OnDestroy()
         {
+            if (GamepadHotkey != null)
+            {
+                GamepadHotkey.SettingChanged -= UpdateGamepadShortcut;
+            }
             harmony?.UnpatchSelf();
             harmony = null;
             ManualPriorityManager.Clear();

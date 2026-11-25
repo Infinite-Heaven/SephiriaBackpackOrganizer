@@ -92,15 +92,26 @@ cd macos && ./install.sh
 ## 使用
 
 - 游戏中按 **F8** 整理背包，完成后提示"整理完毕"
-- 手柄：**LT + RT** 整理，两个扳机先按哪个都可以；持续按住不会重复触发，松开任一扳机后再按下可再次整理
+- 手柄默认 **LT + RT** 整理，可通过 `General.GamepadHotkey` 修改；按键顺序不限，持续按住不会重复触发，松开任一按键后再按下可再次整理
 - 在背包中用鼠标中键点击神器设置手动优先级：点 1 次 P1、2 次 P2、3 次 P3、4 次 P4，再点一次取消；每件物品独立循环
 - 全部参数在 `游戏目录/BepInEx/config/com.sephiria.backpack-organizer.cfg`，改完重启游戏生效
+
+手柄快捷键配置示例（配置文件的 `[General]` 分区）：
+
+```ini
+[General]
+Hotkey = F8
+GamepadHotkey = LeftTrigger + RightTrigger
+```
+
+用 `+` 连接按键名，忽略大小写；可用 `LeftTrigger` / `RightTrigger`、`LeftShoulder` / `RightShoulder`、`DpadUp` / `DpadDown` / `DpadLeft` / `DpadRight`、`North` / `South` / `East` / `West`、`LeftStick` / `RightStick`、`Start` / `Select`。留空或设为 `None` 可禁用手柄整理；无效或重复按键会记录警告并禁用手柄快捷键，不影响 F8。
 
 ## 配置速查
 
 | 分区 | 配置项 | 默认 | 说明 |
 | --- | --- | --- | --- |
 | General | Hotkey | F8 | 触发整理的快捷键 |
+| General | GamepadHotkey | LeftTrigger + RightTrigger | 手柄整理组合键；留空或 None 禁用 |
 | General | SortMode | Enhanced | Vanilla（游戏内置）/ Enhanced（增强） |
 | General | SessionStableDelay | 3 秒 | 进图后等待背包初始化（防丢物品） |
 | Enhanced | SearchRounds | 4 | 每次整理的独立搜索轮数 |
