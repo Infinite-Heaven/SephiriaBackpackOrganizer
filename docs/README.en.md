@@ -93,6 +93,7 @@ Delete `游戏目录/BepInEx/plugins/SephiriaBackpackOrganizer.dll`; to remove t
 - Press **F8** in game to sort your bag; a "done" toast appears when finished
 - Middle-click an artifact in the bag to set manual priority: 1 click = P1, 2 = P2, 3 = P3, 4 = P4, one more click clears it; each artifact cycles independently
 - All settings live in `游戏目录/BepInEx/config/com.sephiria.backpack-organizer.cfg` — restart the game after editing
+- Sorting works with the bag open or closed. Item previews from a closed bag are automatically dismissed without closing tooltips from other screens
 
 ## Configuration
 
