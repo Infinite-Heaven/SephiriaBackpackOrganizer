@@ -401,7 +401,7 @@ namespace SephiriaBackpackOrganizer
             harmony = new Harmony(PluginInfo.PLUGIN_GUID);
             harmony.PatchAll(typeof(Plugin).Assembly);
             Log.LogInfo($"{PluginInfo.PLUGIN_NAME} v{PluginInfo.PLUGIN_VERSION} 已加载。" +
-                        $"按 [{Hotkey.Value}] 整理背包（当前模式: {Mode.Value}）");
+                        $"按 [{Hotkey.Value}] 或手柄 [LT + RT] 整理背包（当前模式: {Mode.Value}）");
         }
 
         /// <summary>每帧轮询逻辑（热键检测/会话诊断/自动整理）。两个 BepInEx 版本均由 MonoBehaviour Update 消息调用。</summary>
@@ -434,7 +434,7 @@ namespace SephiriaBackpackOrganizer
                             $"localPlayer={(NetworkClient.localPlayer != null ? "有" : "无")}");
             }
 
-            if (IsHotkeyDown(Hotkey.Value))
+            if (IsHotkeyDown(Hotkey.Value) || GamepadShortcut.IsPressed())
             {
                 sorter.Sort();
                 return;
